@@ -34,5 +34,15 @@
       <summary>Cacher l'icône quand aucune session n'est active</summary>
       <description>Si activé, l'icône gnotchi disparaît du top bar tant qu'aucune session Claude Code n'est en cours.</description>
     </key>
+    <key name="notify-on-stop" type="b">
+      <default>false</default>
+      <summary>Notification quand l'assistant termine son tour</summary>
+      <description>Si activé, une notification GNOME est émise à chaque événement Stop.</description>
+    </key>
+    <key name="notify-on-error" type="b">
+      <default>false</default>
+      <summary>Notification en cas d'erreur d'outil</summary>
+      <description>Si activé, une notification GNOME est émise dès qu'un outil échoue (PostToolUse avec is_error).</description>
+    </key>
   </schema>
 </schemalist>

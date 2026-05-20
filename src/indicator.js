@@ -8,19 +8,21 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { Mascot } from './mascot.js';
 import { nextVerb } from '../lib/spinnerVerbs.js';
 import { UsageTracker } from './usageTracker.js';
-import { humanize } from '../lib/usage.js';
+import { humanize, sparkline } from '../lib/usage.js';
 
 const FEED_MAX = 12;
 const ISLAND_MASCOT_SIZE = 48;
 
 export const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
-    _init(assetsDir, openPrefs) {
+    _init(assetsDir, openPrefs, opts = {}) {
         super._init(0.0, 'gnotchi');
         this._assetsDir = assetsDir;
+        this._focusByPid = opts.focusByPid || (() => false);
         this._mascots = new Map(); // id -> Mascot (top bar)
         this._islandMascots = new Map(); // id -> Mascot (popup)
         this._activity = new Map(); // id -> string (pour le tooltip de survol)
+        this._terminalPids = new Map(); // id -> pid (pour le clic terminal jump)
         this._feed = [];
         this._working = new Set();
         this._spinnerId = 0;
@@ -61,6 +63,8 @@ class Indicator extends PanelMenu.Button {
         this._usage = new UsageTracker();
         this._usageRow = new PopupMenu.PopupMenuItem("Usage aujourd'hui : calcul…", { reactive: false });
         this.menu.addMenuItem(this._usageRow);
+        this._sparkRow = new PopupMenu.PopupMenuItem('7 derniers jours : …', { reactive: false });
+        this.menu.addMenuItem(this._sparkRow);
         this.menu.connect('open-state-changed', (_m, open) => {
             if (open)
                 this._refreshUsage();
@@ -70,13 +74,16 @@ class Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(prefsItem);
     }
 
-    addSession(id, maxMascots) {
+    addSession(id, maxMascots, terminalPid) {
+        if (Number.isFinite(terminalPid) && terminalPid > 0)
+            this._terminalPids.set(id, terminalPid);
         if (this._mascots.size < maxMascots) {
             const m = new Mascot(this._assetsDir);
             m.setSeed(id);
             this._mascots.set(id, m);
             this._box.add_child(m);
             this._attachTooltip(m, id);
+            this._attachClickJump(m, id);
         }
         const im = new Mascot(this._assetsDir, ISLAND_MASCOT_SIZE);
         im.setSeed(id);
@@ -115,9 +122,23 @@ class Indicator extends PanelMenu.Button {
             this._islandMascots.delete(id);
         }
         this._activity.delete(id);
+        this._terminalPids.delete(id);
         this._working.delete(id);
         this._syncSpinner();
         this._updateVisibility();
+    }
+
+    _attachClickJump(actor, id) {
+        actor.connect('button-press-event', (_a, event) => {
+            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                return Clutter.EVENT_PROPAGATE;
+            const pid = this._terminalPids.get(id);
+            if (!pid)
+                return Clutter.EVENT_PROPAGATE;
+            return this._focusByPid(pid)
+                ? Clutter.EVENT_STOP
+                : Clutter.EVENT_PROPAGATE;
+        });
     }
 
     setHideWhenIdle(on) {
@@ -179,11 +200,20 @@ class Indicator extends PanelMenu.Button {
         const s = this._usage.summary();
         if (!s) {
             this._usageRow.label.set_text("Usage aujourd'hui : calcul…");
+            this._sparkRow.label.set_text('7 derniers jours : …');
             return;
         }
         const extra = s.skipped ? ` · +${s.skipped} fich. ignorés` : '';
         this._usageRow.label.set_text(
             `Usage aujourd'hui (approx.) : ${humanize(s.work)} tok · cache ${humanize(s.cache)}${extra}`);
+        if (s.daily && s.daily.length) {
+            const work = s.daily.map(d => d.work);
+            const max = Math.max(...work, 0);
+            this._sparkRow.label.set_text(
+                `7 derniers jours : ${sparkline(work)}  (max ${humanize(max)})`);
+        } else {
+            this._sparkRow.label.set_text('7 derniers jours : —');
+        }
     }
 
     _refreshHeader() {

@@ -34,6 +34,39 @@ def is_tool_error(tr):
     return False
 
 
+# Terminaux émulateurs reconnus. La détection remonte la chaîne des PPID
+# jusqu'à matcher l'un de ces noms. Limite 20 itérations contre les boucles.
+_TERMINALS = (
+    "gnome-terminal-", "gnome-terminal-server", "terminator", "tilix",
+    "xterm", "xfce4-terminal", "alacritty", "kitty", "foot",
+    "wezterm", "wezterm-gui", "konsole", "urxvt", "rxvt",
+    "ptyxis", "ghostty", "st",
+)
+
+
+def detect_terminal_pid():
+    """Retourne le PID du terminal ancêtre, ou None si non trouvé."""
+    try:
+        pid = os.getppid()
+        for _ in range(20):
+            with open(f"/proc/{pid}/comm") as f:
+                comm = f.read().strip()
+            if any(comm == t or comm.startswith(t) for t in _TERMINALS):
+                return pid
+            with open(f"/proc/{pid}/stat") as f:
+                content = f.read()
+            # Format: "pid (comm) state ppid ..." ; comm peut contenir des
+            # parenthèses, on coupe au dernier ')' pour avoir le reste.
+            after = content.rsplit(")", 1)[1].split()
+            ppid = int(after[1])
+            if ppid <= 1:
+                return None
+            pid = ppid
+    except Exception:
+        return None
+    return None
+
+
 def reaction(event, payload):
     if event == "Stop":
         return "happy"
@@ -121,6 +154,12 @@ def main():
         prompt = payload.get("prompt") or ""
         if event == "UserPromptSubmit" and mode != "off":
             data["emotion"] = classify(prompt)
+        if event == "SessionStart":
+            tpid = detect_terminal_pid()
+            if tpid:
+                data["terminal_pid"] = tpid
+        if event == "PostToolUse" and is_tool_error(payload.get("tool_response")):
+            data["is_error"] = True
         msg = {"v": 1, "event": event, "session_id": sid,
                "cwd": payload.get("cwd") or "", "ts": int(time.time()), "data": data}
         try:

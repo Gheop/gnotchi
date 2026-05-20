@@ -46,6 +46,21 @@ export default class GnotchiPrefs extends ExtensionPreferences {
         settings.bind('hide-when-idle', hideRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behavior.add(hideRow);
 
+        const notify = new Adw.PreferencesGroup({ title: 'Notifications' });
+        page.add(notify);
+        const stopRow = new Adw.SwitchRow({
+            title: 'À la fin d’un tour d’assistant (Stop)',
+            subtitle: 'Notification GNOME native',
+        });
+        settings.bind('notify-on-stop', stopRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        notify.add(stopRow);
+        const errRow = new Adw.SwitchRow({
+            title: 'À chaque erreur d’outil',
+            subtitle: 'Notification GNOME native quand un PostToolUse échoue',
+        });
+        settings.bind('notify-on-error', errRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        notify.add(errRow);
+
         const diag = new Adw.PreferencesGroup({ title: 'Diagnostic' });
         page.add(diag);
         const claudeDir = GLib.getenv('CLAUDE_CONFIG_DIR') ||

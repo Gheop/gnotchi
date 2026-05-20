@@ -8,6 +8,24 @@ import { Indicator } from './src/indicator.js';
 import { clearSpriteCache } from './src/mascot.js';
 import { withHooks, needsWrite } from './lib/hooksConfig.js';
 
+function focusWindowByPid(pid) {
+    if (!pid || !global.display)
+        return false;
+    const wm = global.workspace_manager;
+    if (!wm)
+        return false;
+    for (let i = 0; i < wm.get_n_workspaces(); i++) {
+        for (const w of wm.get_workspace_by_index(i).list_windows()) {
+            if (w.get_pid && w.get_pid() === pid) {
+                w.get_workspace().activate(global.get_current_time());
+                w.activate(global.get_current_time());
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 export default class GnotchiExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
@@ -20,8 +38,18 @@ export default class GnotchiExtension extends Extension {
         const idleMs = this._settings.get_int('idle-timeout-minutes') * 60000;
         this._maxMascots = this._settings.get_int('max-mascots');
 
+        this._terminalPids = new Map();
+        this._notifyOnStop = this._settings.get_boolean('notify-on-stop');
+        this._notifyOnError = this._settings.get_boolean('notify-on-error');
+        this._settingsIds.push(this._settings.connect('changed::notify-on-stop',
+            () => { this._notifyOnStop = this._settings.get_boolean('notify-on-stop'); }));
+        this._settingsIds.push(this._settings.connect('changed::notify-on-error',
+            () => { this._notifyOnError = this._settings.get_boolean('notify-on-error'); }));
+
         const assetsDir = GLib.build_filenamev([this.path, 'assets']);
-        this._indicator = new Indicator(assetsDir, () => this.openPreferences());
+        this._indicator = new Indicator(assetsDir, () => this.openPreferences(), {
+            focusByPid: focusWindowByPid,
+        });
         this._indicator.setHideWhenIdle(this._settings.get_boolean('hide-when-idle'));
         this._settingsIds.push(this._settings.connect('changed::hide-when-idle',
             () => this._indicator.setHideWhenIdle(this._settings.get_boolean('hide-when-idle'))));
@@ -30,15 +58,23 @@ export default class GnotchiExtension extends Extension {
         this._mgr = new SessionManager(idleMs);
         this._mgrIds = [
             this._mgr.connect('session-added', (_m, id) =>
-                this._indicator.addSession(id, this._maxMascots)),
-            this._mgr.connect('session-removed', (_m, id) =>
-                this._indicator.removeSession(id)),
+                this._indicator.addSession(id, this._maxMascots, this._terminalPids.get(id))),
+            this._mgr.connect('session-removed', (_m, id) => {
+                this._terminalPids.delete(id);
+                this._indicator.removeSession(id);
+            }),
             this._mgr.connect('session-changed', (_m, id) => {
                 const e = this._mgr.sessions.get(id);
                 if (e)
                     this._indicator.updateSession(id, e.session.state);
             }),
-            this._mgr.connect('feed', (_m, msg) => this._indicator.pushFeed(msg)),
+            this._mgr.connect('feed', (_m, msg) => {
+                const pid = msg?.data?.terminal_pid;
+                if (Number.isFinite(pid) && pid > 0)
+                    this._terminalPids.set(msg.session_id, pid);
+                this._indicator.pushFeed(msg);
+                this._maybeNotify(msg);
+            }),
         ];
 
         this._server = new SocketServer();
@@ -76,6 +112,16 @@ export default class GnotchiExtension extends Extension {
         }
         this._settingsIds = null;
         this._settings = null;
+    }
+
+    _maybeNotify(msg) {
+        if (!msg || !msg.event)
+            return;
+        const short = String(msg.session_id || '').slice(0, 8) || '?';
+        if (msg.event === 'Stop' && this._notifyOnStop)
+            Main.notify('gnotchi', `Session ${short} done`);
+        else if (msg.event === 'PostToolUse' && msg.data?.is_error && this._notifyOnError)
+            Main.notify('gnotchi', `Tool error in ${short}`);
     }
 
     _writeRuntimeConf() {

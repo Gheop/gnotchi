@@ -1,12 +1,14 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {
-    parseUsageLine, sumUsage, headline, startOfTodayMs,
+    parseUsageLine, sumUsage, headline, startOfTodayMs, aggregateByDay,
 } from '../lib/usage.js';
 
 const TAIL_BYTES = 262144;
 const MAX_FILES = 250;
 const CACHE_MS = 60000;
+const HISTORY_DAYS = 7;
+const ONE_DAY_MS = 86400000;
 
 // Promisifie un appel *_async via sa forme callback (auto-contenu :
 // évite tout conflit avec un Gio._promisify global du Shell).
@@ -46,11 +48,12 @@ export class UsageTracker {
         this._busy = true;
         try {
             const now = Date.now();
-            const since = startOfTodayMs(now);
+            const today = startOfTodayMs(now);
+            const windowStart = today - (HISTORY_DAYS - 1) * ONE_DAY_MS;
             const claudeDir = GLib.getenv('CLAUDE_CONFIG_DIR') ||
                 GLib.build_filenamev([GLib.get_home_dir(), '.claude']);
             const root = GLib.build_filenamev([claudeDir, 'projects']);
-            const files = await this._listToday(root, since);
+            const files = await this._listSince(root, windowStart);
             files.sort((a, b) => b.mtime - a.mtime);
             const skipped = Math.max(0, files.length - MAX_FILES);
             const entries = [];
@@ -61,8 +64,9 @@ export class UsageTracker {
                         entries.push(e);
                 }
             }
-            const h = headline(sumUsage(entries, since));
-            this._cache = { work: h.work, cache: h.cache, skipped };
+            const h = headline(sumUsage(entries, today));
+            const daily = aggregateByDay(entries, today, HISTORY_DAYS);
+            this._cache = { work: h.work, cache: h.cache, skipped, daily };
             this._cacheTs = Date.now();
         } catch (e) {
             logError(e, 'gnotchi: usage refresh');
@@ -71,7 +75,7 @@ export class UsageTracker {
         }
     }
 
-    async _listToday(root, since) {
+    async _listSince(root, since) {
         const out = [];
         const dir = Gio.File.new_for_path(root);
         let projEnum;

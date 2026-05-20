@@ -37,14 +37,21 @@ setups or manual control, run `bash tools/install-hooks.sh`.
 ## Usage
 
 Launch Claude Code. A mascot appears in the top bar for each active session
-and follows the session's activity. Click any mascot to open the popup.
+and follows the session's activity. Click a mascot to jump to its terminal
+window (when detected); clicking the panel icon outside a mascot opens the
+popup as usual. Hover a mascot for a quick tooltip with the short session id
+and current activity.
+
 When a session is busy, the popup header rotates a whimsical verb
 (`✻ Cogitating…`, etc.). When a tool fails the mascot looks sad; when the
 assistant finishes a turn it looks happy.
 
-The popup also shows a local estimate of today's token usage (`work · cache`),
-computed entirely from local Claude Code transcripts in `~/.claude/projects/`.
-No network calls, no API keys, no cost numbers.
+The popup shows a local estimate of today's token usage and a 7-day sparkline,
+all computed from local Claude Code transcripts in `~/.claude/projects/`. No
+network calls, no API keys, no cost numbers.
+
+Optional GNOME notifications can be enabled in Preferences for end-of-turn
+(`Stop`) and tool errors.
 
 ## Privacy
 
@@ -92,6 +99,19 @@ gnotchi is released under GPL-3.0 (see `LICENSE`). The sprite assets in
 also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
+
+### v1.10.0 — Terminal jump, notifications, 7-day sparkline (2026-05-20)
+
+- Click a top-bar mascot to focus its terminal window. The hook captures the
+  terminal PID at `SessionStart` (walks `/proc/<pid>` ancestors until it
+  matches a known emulator: gnome-terminal, kitty, foot, alacritty, wezterm,
+  konsole, ghostty, ptyxis, terminator, tilix, xterm…). Falls back to the
+  usual popup if no PID was captured or the window can't be matched.
+- Optional native GNOME notifications on `Stop` (assistant finished a turn)
+  and on tool errors. Both default off, toggleable in Preferences →
+  Notifications.
+- Popup now shows a 7-day token usage sparkline (`▁▂▄▇▄▂▁`) below the
+  "today" line, with the day's max in human-readable units.
 
 ### v1.9.0 — Three quick wins (2026-05-20)
 
