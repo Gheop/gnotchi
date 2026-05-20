@@ -46,6 +46,13 @@ export default class GnotchiPrefs extends ExtensionPreferences {
         settings.bind('hide-when-idle', hideRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behavior.add(hideRow);
 
+        const celebRow = new Adw.SwitchRow({
+            title: 'Confettis à la fin d’un tour d’assistant',
+            subtitle: 'Petite anim festive depuis la mascotte panel sur Stop',
+        });
+        settings.bind('celebrate-on-stop', celebRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behavior.add(celebRow);
+
         const feedModes = ['all', 'significant'];
         const feedRow = new Adw.ComboRow({
             title: 'Flux d’activité du popup',

@@ -150,6 +150,8 @@ def main():
         data = {}
         if isinstance(payload.get("tool_name"), str):
             data["tool_name"] = payload["tool_name"]
+        if isinstance(payload.get("transcript_path"), str):
+            data["transcript_path"] = payload["transcript_path"]
         mode = emotion_mode()
         prompt = payload.get("prompt") or ""
         if event == "UserPromptSubmit" and mode != "off":

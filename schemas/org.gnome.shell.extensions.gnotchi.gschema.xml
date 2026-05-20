@@ -53,5 +53,10 @@
       <summary>Filtrage du flux d'activité du popup</summary>
       <description>all : tous les événements. significant : uniquement SessionStart, Stop, PreCompact, SessionEnd et les erreurs d'outils.</description>
     </key>
+    <key name="celebrate-on-stop" type="b">
+      <default>true</default>
+      <summary>Petite anim de confettis à la fin d'un tour d'assistant</summary>
+      <description>Si activé, quelques confettis colorés tombent depuis la mascotte panel quand un événement Stop arrive.</description>
+    </key>
   </schema>
 </schemalist>

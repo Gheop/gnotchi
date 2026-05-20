@@ -56,6 +56,9 @@ export default class GnotchiExtension extends Extension {
         this._indicator.setFeedFilter(this._settings.get_string('feed-filter'));
         this._settingsIds.push(this._settings.connect('changed::feed-filter',
             () => this._indicator.setFeedFilter(this._settings.get_string('feed-filter'))));
+        this._indicator.setCelebrateOnStop(this._settings.get_boolean('celebrate-on-stop'));
+        this._settingsIds.push(this._settings.connect('changed::celebrate-on-stop',
+            () => this._indicator.setCelebrateOnStop(this._settings.get_boolean('celebrate-on-stop'))));
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._mgr = new SessionManager(idleMs);
@@ -75,6 +78,9 @@ export default class GnotchiExtension extends Extension {
                 const pid = msg?.data?.terminal_pid;
                 if (Number.isFinite(pid) && pid > 0)
                     this._terminalPids.set(msg.session_id, pid);
+                const transcript = msg?.data?.transcript_path;
+                if (typeof transcript === 'string' && transcript)
+                    this._indicator.setTranscriptPath(msg.session_id, transcript);
                 this._indicator.pushFeed(msg);
                 this._maybeNotify(msg);
             }),
@@ -121,10 +127,13 @@ export default class GnotchiExtension extends Extension {
         if (!msg || !msg.event)
             return;
         const short = String(msg.session_id || '').slice(0, 8) || '?';
-        if (msg.event === 'Stop' && this._notifyOnStop)
-            Main.notify('gnotchi', `Session ${short} done`);
-        else if (msg.event === 'PostToolUse' && msg.data?.is_error && this._notifyOnError)
+        if (msg.event === 'Stop') {
+            if (this._notifyOnStop)
+                Main.notify('gnotchi', `Session ${short} done`);
+            this._indicator.celebrate(msg.session_id);
+        } else if (msg.event === 'PostToolUse' && msg.data?.is_error && this._notifyOnError) {
             Main.notify('gnotchi', `Tool error in ${short}`);
+        }
     }
 
     _writeRuntimeConf() {

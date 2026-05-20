@@ -103,6 +103,19 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.13.0 — Top projects, transcript open, confetti, new session (2026-05-20)
+
+- New popup row "Top projets : X 8k · Y 3k · Z 1k" — daily token usage
+  grouped by project (the slug folder under `~/.claude/projects/`)
+- Right-click a top-bar mascot to open the session's transcript `.jsonl`
+  in your default editor. The hook propagates `transcript_path` from the
+  Claude Code payload
+- Small confetti animation falls from the panel mascot on `Stop` events.
+  Toggleable via the new "Confettis…" preference (default on)
+- New popup entry "Nouvelle session Claude Code…" launches `claude` in
+  a fresh terminal window (tries ptyxis, gnome-terminal, kgx, ghostty,
+  foot, kitty, alacritty, wezterm, konsole, tilix, xterm in order)
+
 ### v1.12.0 — Richer hover tooltip (2026-05-20)
 
 - Hover tooltip now shows `${cwd_basename} · ${activity} · ${duration}`

@@ -1,7 +1,7 @@
 import { test, assertEqual, assertTrue, run } from './harness.js';
 import {
     parseUsageLine, sumUsage, headline, humanize, startOfTodayMs,
-    aggregateByDay, sparkline,
+    aggregateByDay, sparkline, aggregateByProject, prettyProject,
 } from '../lib/usage.js';
 
 const LINE = JSON.stringify({
@@ -90,6 +90,41 @@ test('sparkline : vide, plat, échelle relative', () => {
     assertEqual(s[0], '▁');
     assertEqual(s[3], '█');
     assertTrue(s[1] !== '▁'); // valeur > 0 doit être au moins le 2e niveau
+});
+
+test('aggregateByProject : tri par work desc, sans cap', () => {
+    const mk = (project, w, ts = 1000) => ({
+        ts, project, input: w, output: 0, cacheCreation: 0, cacheRead: 1,
+    });
+    const entries = [
+        mk('p-a', 100),
+        mk('p-b', 500),
+        mk('p-a', 50),
+        mk('p-c', 200),
+    ];
+    const r = aggregateByProject(entries, 0);
+    assertEqual(r.length, 3);
+    assertEqual(r[0], { project: 'p-b', work: 500, cache: 1 });
+    assertEqual(r[1], { project: 'p-c', work: 200, cache: 1 });
+    assertEqual(r[2], { project: 'p-a', work: 150, cache: 2 });
+});
+
+test('aggregateByProject : filtre par sinceMs et ignore sans project', () => {
+    const entries = [
+        { ts: 100, project: 'p', input: 1, output: 0, cacheCreation: 0, cacheRead: 0 },
+        { ts: 50, project: 'p', input: 999, output: 0, cacheCreation: 0, cacheRead: 0 },
+        { ts: 100, input: 9, output: 0, cacheCreation: 0, cacheRead: 0 }, // pas de project
+    ];
+    const r = aggregateByProject(entries, 100);
+    assertEqual(r, [{ project: 'p', work: 1, cache: 0 }]);
+});
+
+test('prettyProject : dernier segment du slug', () => {
+    assertEqual(prettyProject('-home-sib-src-gnotchi'), 'gnotchi');
+    assertEqual(prettyProject('home-sib-myapp'), 'myapp');
+    assertEqual(prettyProject('mono'), 'mono');
+    assertEqual(prettyProject(''), '?');
+    assertEqual(prettyProject(null), '?');
 });
 
 run();

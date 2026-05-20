@@ -2,6 +2,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import {
     parseUsageLine, sumUsage, headline, startOfTodayMs, aggregateByDay,
+    aggregateByProject,
 } from '../lib/usage.js';
 
 const TAIL_BYTES = 262144;
@@ -58,15 +59,22 @@ export class UsageTracker {
             const skipped = Math.max(0, files.length - MAX_FILES);
             const entries = [];
             for (const f of files.slice(0, MAX_FILES)) {
+                const slug = GLib.path_get_basename(
+                    GLib.path_get_dirname(f.path));
                 for (const ln of await this._tailLines(f.path, f.size)) {
                     const e = parseUsageLine(ln);
-                    if (e)
+                    if (e) {
+                        e.project = slug;
                         entries.push(e);
+                    }
                 }
             }
             const h = headline(sumUsage(entries, today));
             const daily = aggregateByDay(entries, today, HISTORY_DAYS);
-            this._cache = { work: h.work, cache: h.cache, skipped, daily };
+            const projects = aggregateByProject(entries, today);
+            this._cache = {
+                work: h.work, cache: h.cache, skipped, daily, projects,
+            };
             this._cacheTs = Date.now();
         } catch (e) {
             logError(e, 'gnotchi: usage refresh');

@@ -2,15 +2,17 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
 import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { Mascot } from './mascot.js';
 import { nextVerb } from '../lib/spinnerVerbs.js';
 import { UsageTracker } from './usageTracker.js';
-import { humanize, sparkline } from '../lib/usage.js';
+import { humanize, sparkline, prettyProject } from '../lib/usage.js';
 import { shouldDisplay } from '../lib/feed.js';
 import { humanDuration } from '../lib/duration.js';
+import { candidateArgvs } from '../lib/terminalLauncher.js';
 
 const FEED_MAX = 12;
 const ISLAND_MASCOT_SIZE = 48;
@@ -27,12 +29,15 @@ class Indicator extends PanelMenu.Button {
         this._cwd = new Map(); // id -> cwd (dernier connu via feed)
         this._stateSince = new Map(); // id -> ms du dernier changement d'activité
         this._terminalPids = new Map(); // id -> pid (pour le clic terminal jump)
+        this._transcripts = new Map(); // id -> chemin du .jsonl
+        this._confettis = new Set(); // St.Widget en vol (cleanup au destroy)
         this._feed = [];
         this._working = new Set();
         this._spinnerId = 0;
         this._verb = null;
         this._hideWhenIdle = false;
         this._feedFilter = 'all';
+        this._celebrate = true;
         this._tooltip = new St.Label({
             visible: false,
             style_class: 'dash-label',
@@ -72,6 +77,12 @@ class Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._sparkRow);
         this._sessionsMenu = new PopupMenu.PopupSubMenuMenuItem('Sessions actives (0)');
         this.menu.addMenuItem(this._sessionsMenu);
+        this._topProjectsRow = new PopupMenu.PopupMenuItem('Top projets : …', { reactive: false });
+        this.menu.addMenuItem(this._topProjectsRow);
+
+        const newSession = new PopupMenu.PopupMenuItem('Nouvelle session Claude Code…');
+        newSession.connect('activate', () => this._launchClaude());
+        this.menu.addMenuItem(newSession);
         this.menu.connect('open-state-changed', (_m, open) => {
             if (open)
                 this._refreshUsage();
@@ -137,6 +148,7 @@ class Indicator extends PanelMenu.Button {
         this._cwd.delete(id);
         this._stateSince.delete(id);
         this._terminalPids.delete(id);
+        this._transcripts.delete(id);
         this._working.delete(id);
         this._syncSpinner();
         this._refreshSessionsMenu();
@@ -165,15 +177,35 @@ class Indicator extends PanelMenu.Button {
 
     _attachClickJump(actor, id) {
         actor.connect('button-press-event', (_a, event) => {
-            if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+            const btn = event.get_button();
+            if (btn === Clutter.BUTTON_PRIMARY) {
+                const pid = this._terminalPids.get(id);
+                if (pid && this._focusByPid(pid))
+                    return Clutter.EVENT_STOP;
                 return Clutter.EVENT_PROPAGATE;
-            const pid = this._terminalPids.get(id);
-            if (!pid)
-                return Clutter.EVENT_PROPAGATE;
-            return this._focusByPid(pid)
-                ? Clutter.EVENT_STOP
-                : Clutter.EVENT_PROPAGATE;
+            }
+            if (btn === Clutter.BUTTON_SECONDARY) {
+                const path = this._transcripts.get(id);
+                if (path && this._openTranscript(path))
+                    return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
+    }
+
+    _openTranscript(path) {
+        try {
+            const uri = Gio.File.new_for_path(path).get_uri();
+            return Gio.AppInfo.launch_default_for_uri(uri, null);
+        } catch (e) {
+            logError(e, 'gnotchi: openTranscript');
+            return false;
+        }
+    }
+
+    setTranscriptPath(id, path) {
+        if (typeof path === 'string' && path.length)
+            this._transcripts.set(id, path);
     }
 
     setHideWhenIdle(on) {
@@ -239,6 +271,50 @@ class Indicator extends PanelMenu.Button {
         this._feedFilter = mode === 'significant' ? 'significant' : 'all';
     }
 
+    setCelebrateOnStop(on) {
+        this._celebrate = !!on;
+    }
+
+    celebrate(id) {
+        if (!this._celebrate)
+            return;
+        const m = this._mascots.get(id);
+        if (!m)
+            return;
+        const [ax, ay] = m.get_transformed_position();
+        const w = m.get_width();
+        const colors = ['#ff8c42', '#a78bfa', '#22d3ee', '#f472b6', '#facc15'];
+        const N = 8;
+        for (let i = 0; i < N; i++) {
+            const c = colors[i % colors.length];
+            const px = new St.Widget({
+                style: `background-color: ${c}; border-radius: 2px;`,
+                width: 5, height: 5,
+                opacity: 230,
+                reactive: false,
+            });
+            Main.layoutManager.addChrome(px);
+            this._confettis.add(px);
+            const startX = Math.round(ax + w / 2 + (Math.random() * 14 - 7));
+            const startY = Math.round(ay + 22);
+            px.set_position(startX, startY);
+            const drift = Math.round(Math.random() * 60 - 30);
+            const fall = 50 + Math.round(Math.random() * 30);
+            px.ease({
+                x: startX + drift,
+                y: startY + fall,
+                opacity: 0,
+                duration: 800 + Math.round(Math.random() * 200),
+                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+                onComplete: () => {
+                    this._confettis.delete(px);
+                    Main.layoutManager.removeChrome(px);
+                    px.destroy();
+                },
+            });
+        }
+    }
+
     setStatusText(text) {
         this._status.label.set_text(text);
     }
@@ -248,6 +324,7 @@ class Indicator extends PanelMenu.Button {
         if (!s) {
             this._usageRow.label.set_text("Usage aujourd'hui : calcul…");
             this._sparkRow.label.set_text('7 derniers jours : …');
+            this._topProjectsRow.label.set_text('Top projets : …');
             return;
         }
         const extra = s.skipped ? ` · +${s.skipped} fich. ignorés` : '';
@@ -261,6 +338,27 @@ class Indicator extends PanelMenu.Button {
         } else {
             this._sparkRow.label.set_text('7 derniers jours : —');
         }
+        if (s.projects && s.projects.length) {
+            const top = s.projects.slice(0, 3)
+                .map(p => `${prettyProject(p.project)} ${humanize(p.work)}`)
+                .join(' · ');
+            this._topProjectsRow.label.set_text(`Top projets : ${top}`);
+        } else {
+            this._topProjectsRow.label.set_text('Top projets : —');
+        }
+    }
+
+    _launchClaude() {
+        for (const argv of candidateArgvs('claude')) {
+            try {
+                Gio.Subprocess.new(argv, Gio.SubprocessFlags.STDIN_INHERIT);
+                return true;
+            } catch (e) {
+                // binaire absent ou autre : on tente le suivant
+            }
+        }
+        Main.notify('gnotchi', 'Aucun terminal compatible trouvé');
+        return false;
     }
 
     _refreshHeader() {
@@ -297,6 +395,11 @@ class Indicator extends PanelMenu.Button {
     destroy() {
         this._stopSpinner();
         this._usage.destroy();
+        for (const px of this._confettis) {
+            try { Main.layoutManager.removeChrome(px); } catch { }
+            try { px.destroy(); } catch { }
+        }
+        this._confettis.clear();
         if (this._tooltip) {
             Main.layoutManager.removeChrome(this._tooltip);
             this._tooltip.destroy();
