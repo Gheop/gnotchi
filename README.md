@@ -1,5 +1,8 @@
 # gnotchi
 
+[![tests](https://github.com/Gheop/gnotchi/actions/workflows/test.yml/badge.svg)](https://github.com/Gheop/gnotchi/actions/workflows/test.yml)
+[![license: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
+
 A pixel-art mascot that lives in your GNOME top bar and reacts in real time
 to your Claude Code sessions. One mascot per session, driven by Claude Code
 hooks over a Unix socket. Inspired by
@@ -99,6 +102,16 @@ gnotchi is released under GPL-3.0 (see `LICENSE`). The sprite assets in
 also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
+
+### v1.11.0 — Feed filter, copy session id, CI (2026-05-20)
+
+- New "Sessions actives (N)" submenu in the popup. Each entry copies the
+  full session ID to the clipboard and shows a brief notification
+- New `feed-filter` preference (`all` / `significant`) — `significant` keeps
+  only `SessionStart`, `Stop`, `PreCompact`, `SessionEnd` and tool errors,
+  for a cleaner popup feed during working-heavy sessions
+- GitHub Actions CI: runs the full gjs + shell test suite on every push and
+  PR. Badge in the README
 
 ### v1.10.0 — Terminal jump, notifications, 7-day sparkline (2026-05-20)
 

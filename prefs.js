@@ -46,6 +46,18 @@ export default class GnotchiPrefs extends ExtensionPreferences {
         settings.bind('hide-when-idle', hideRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behavior.add(hideRow);
 
+        const feedModes = ['all', 'significant'];
+        const feedRow = new Adw.ComboRow({
+            title: 'Flux d’activité du popup',
+            subtitle: 'all : tout. significant : juste démarrage/fin, complétion, compaction, erreurs.',
+            model: Gtk.StringList.new(feedModes),
+        });
+        const fIdx = feedModes.indexOf(settings.get_string('feed-filter'));
+        feedRow.set_selected(fIdx >= 0 ? fIdx : 0);
+        feedRow.connect('notify::selected', () =>
+            settings.set_string('feed-filter', feedModes[feedRow.get_selected()]));
+        behavior.add(feedRow);
+
         const notify = new Adw.PreferencesGroup({ title: 'Notifications' });
         page.add(notify);
         const stopRow = new Adw.SwitchRow({

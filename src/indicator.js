@@ -9,6 +9,7 @@ import { Mascot } from './mascot.js';
 import { nextVerb } from '../lib/spinnerVerbs.js';
 import { UsageTracker } from './usageTracker.js';
 import { humanize, sparkline } from '../lib/usage.js';
+import { shouldDisplay } from '../lib/feed.js';
 
 const FEED_MAX = 12;
 const ISLAND_MASCOT_SIZE = 48;
@@ -28,6 +29,7 @@ class Indicator extends PanelMenu.Button {
         this._spinnerId = 0;
         this._verb = null;
         this._hideWhenIdle = false;
+        this._feedFilter = 'all';
         this._tooltip = new St.Label({
             visible: false,
             style_class: 'dash-label',
@@ -65,6 +67,8 @@ class Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._usageRow);
         this._sparkRow = new PopupMenu.PopupMenuItem('7 derniers jours : …', { reactive: false });
         this.menu.addMenuItem(this._sparkRow);
+        this._sessionsMenu = new PopupMenu.PopupSubMenuMenuItem('Sessions actives (0)');
+        this.menu.addMenuItem(this._sessionsMenu);
         this.menu.connect('open-state-changed', (_m, open) => {
             if (open)
                 this._refreshUsage();
@@ -90,6 +94,7 @@ class Indicator extends PanelMenu.Button {
         this._islandMascots.set(id, im);
         this._island.add_child(im);
         this._refreshHeader();
+        this._refreshSessionsMenu();
         this._updateVisibility();
     }
 
@@ -125,7 +130,28 @@ class Indicator extends PanelMenu.Button {
         this._terminalPids.delete(id);
         this._working.delete(id);
         this._syncSpinner();
+        this._refreshSessionsMenu();
         this._updateVisibility();
+    }
+
+    _refreshSessionsMenu() {
+        const ids = [...this._islandMascots.keys()];
+        this._sessionsMenu.label.set_text(`Sessions actives (${ids.length})`);
+        this._sessionsMenu.menu.removeAll();
+        if (!ids.length) {
+            const empty = new PopupMenu.PopupMenuItem('— aucune session —', { reactive: false });
+            this._sessionsMenu.menu.addMenuItem(empty);
+            return;
+        }
+        for (const id of ids) {
+            const short = id.slice(0, 8);
+            const item = new PopupMenu.PopupMenuItem(`Copier l’ID : ${short}…`);
+            item.connect('activate', () => {
+                St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, id);
+                Main.notify('gnotchi', `Session ID copié : ${short}…`);
+            });
+            this._sessionsMenu.menu.addMenuItem(item);
+        }
     }
 
     _attachClickJump(actor, id) {
@@ -185,11 +211,17 @@ class Indicator extends PanelMenu.Button {
     }
 
     pushFeed(msg) {
+        if (!shouldDisplay(msg, this._feedFilter))
+            return;
         const proj = msg.cwd ? GLib.path_get_basename(msg.cwd) : msg.session_id.slice(0, 6);
         const t = new Date(msg.ts * 1000).toLocaleTimeString();
         this._feed.unshift(`${t}  ${proj}  ${msg.event}`);
         this._feed = this._feed.slice(0, FEED_MAX);
         this._feedLabel.set_text(this._feed.join('\n'));
+    }
+
+    setFeedFilter(mode) {
+        this._feedFilter = mode === 'significant' ? 'significant' : 'all';
     }
 
     setStatusText(text) {

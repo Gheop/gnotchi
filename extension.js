@@ -53,6 +53,9 @@ export default class GnotchiExtension extends Extension {
         this._indicator.setHideWhenIdle(this._settings.get_boolean('hide-when-idle'));
         this._settingsIds.push(this._settings.connect('changed::hide-when-idle',
             () => this._indicator.setHideWhenIdle(this._settings.get_boolean('hide-when-idle'))));
+        this._indicator.setFeedFilter(this._settings.get_string('feed-filter'));
+        this._settingsIds.push(this._settings.connect('changed::feed-filter',
+            () => this._indicator.setFeedFilter(this._settings.get_string('feed-filter'))));
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._mgr = new SessionManager(idleMs);

@@ -5,6 +5,10 @@
     <value nick="local" value="1"/>
     <value nick="local-headless" value="2"/>
   </enum>
+  <enum id="org.gnome.shell.extensions.gnotchi.feed-filter">
+    <value nick="all" value="0"/>
+    <value nick="significant" value="1"/>
+  </enum>
   <schema id="org.gnome.shell.extensions.gnotchi"
           path="/org/gnome/shell/extensions/gnotchi/">
     <key name="emotion-mode" enum="org.gnome.shell.extensions.gnotchi.emotion-mode">
@@ -43,6 +47,11 @@
       <default>false</default>
       <summary>Notification en cas d'erreur d'outil</summary>
       <description>Si activé, une notification GNOME est émise dès qu'un outil échoue (PostToolUse avec is_error).</description>
+    </key>
+    <key name="feed-filter" enum="org.gnome.shell.extensions.gnotchi.feed-filter">
+      <default>'all'</default>
+      <summary>Filtrage du flux d'activité du popup</summary>
+      <description>all : tous les événements. significant : uniquement SessionStart, Stop, PreCompact, SessionEnd et les erreurs d'outils.</description>
     </key>
   </schema>
 </schemalist>

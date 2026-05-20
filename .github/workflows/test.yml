@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gjs + python3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gjs python3
+
+      - name: Show versions
+        run: |
+          gjs --version
+          python3 --version
+          bash --version | head -1
+
+      - name: Run gjs test suite
+        run: |
+          set -e
+          for t in tests/*.test.js; do
+            echo "== $t =="
+            gjs -m "$t"
+          done
+
+      - name: Run shell test suite
+        run: |
+          set -e
+          for t in tests/*.test.sh; do
+            echo "== $t =="
+            bash "$t"
+          done
