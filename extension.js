@@ -76,8 +76,10 @@ export default class GnotchiExtension extends Extension {
             }),
             this._mgr.connect('feed', (_m, msg) => {
                 const pid = msg?.data?.terminal_pid;
-                if (Number.isFinite(pid) && pid > 0)
+                if (Number.isFinite(pid) && pid > 0) {
                     this._terminalPids.set(msg.session_id, pid);
+                    this._indicator.setTerminalPid(msg.session_id, pid);
+                }
                 const transcript = msg?.data?.transcript_path;
                 if (typeof transcript === 'string' && transcript)
                     this._indicator.setTranscriptPath(msg.session_id, transcript);

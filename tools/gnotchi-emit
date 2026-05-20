@@ -156,10 +156,12 @@ def main():
         prompt = payload.get("prompt") or ""
         if event == "UserPromptSubmit" and mode != "off":
             data["emotion"] = classify(prompt)
-        if event == "SessionStart":
-            tpid = detect_terminal_pid()
-            if tpid:
-                data["terminal_pid"] = tpid
+        # Envoyer terminal_pid à chaque hook (pas juste SessionStart) permet
+        # de capturer le PID terminal même pour les sessions déjà actives au
+        # moment où l'extension est (re)chargée. Coût : 1-2 fichiers /proc lus.
+        tpid = detect_terminal_pid()
+        if tpid:
+            data["terminal_pid"] = tpid
         if event == "PostToolUse" and is_tool_error(payload.get("tool_response")):
             data["is_error"] = True
         msg = {"v": 1, "event": event, "session_id": sid,

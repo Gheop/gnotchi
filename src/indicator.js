@@ -166,12 +166,41 @@ class Indicator extends PanelMenu.Button {
         }
         for (const id of ids) {
             const short = id.slice(0, 8);
-            const item = new PopupMenu.PopupMenuItem(`Copier l’ID : ${short}…`);
-            item.connect('activate', () => {
+            const cwd = this._cwd.get(id);
+            const head = cwd ? GLib.path_get_basename(cwd) : short;
+            const sub = new PopupMenu.PopupSubMenuMenuItem(`${head} (${short})`);
+
+            const copyItem = new PopupMenu.PopupMenuItem('Copier l’ID');
+            copyItem.connect('activate', () => {
                 St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, id);
                 Main.notify('gnotchi', `Session ID copié : ${short}…`);
             });
-            this._sessionsMenu.menu.addMenuItem(item);
+            sub.menu.addMenuItem(copyItem);
+
+            const pid = this._terminalPids.get(id);
+            const focusItem = new PopupMenu.PopupMenuItem(
+                pid ? 'Aller au terminal' : 'Aller au terminal (indisponible)');
+            if (!pid) {
+                focusItem.setSensitive(false);
+            } else {
+                focusItem.connect('activate', () => {
+                    if (!this._focusByPid(pid))
+                        Main.notify('gnotchi', 'Fenêtre terminal introuvable');
+                });
+            }
+            sub.menu.addMenuItem(focusItem);
+
+            const tpath = this._transcripts.get(id);
+            const transcriptItem = new PopupMenu.PopupMenuItem(
+                tpath ? 'Ouvrir le transcript' : 'Ouvrir le transcript (indisponible)');
+            if (!tpath) {
+                transcriptItem.setSensitive(false);
+            } else {
+                transcriptItem.connect('activate', () => this._openTranscript(tpath));
+            }
+            sub.menu.addMenuItem(transcriptItem);
+
+            this._sessionsMenu.menu.addMenuItem(sub);
         }
     }
 
@@ -204,8 +233,19 @@ class Indicator extends PanelMenu.Button {
     }
 
     setTranscriptPath(id, path) {
-        if (typeof path === 'string' && path.length)
+        if (typeof path === 'string' && path.length) {
             this._transcripts.set(id, path);
+            this._refreshSessionsMenu();
+        }
+    }
+
+    setTerminalPid(id, pid) {
+        if (Number.isFinite(pid) && pid > 0) {
+            const prev = this._terminalPids.get(id);
+            this._terminalPids.set(id, pid);
+            if (prev !== pid)
+                this._refreshSessionsMenu();
+        }
     }
 
     setHideWhenIdle(on) {

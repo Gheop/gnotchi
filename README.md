@@ -103,6 +103,18 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.13.1 — Discoverable session actions, ptyxis tab (2026-05-20)
+
+- Each entry under "Sessions actives" is now a submenu with three actions:
+  Copy ID, Jump to terminal, Open transcript. Items that have no data yet
+  (no captured PID, no transcript path) are visible but disabled, so the
+  feature is discoverable even before it's available
+- `gnotchi-emit` now sends `terminal_pid` on every hook event (not only
+  `SessionStart`), so sessions already running when the extension is
+  reloaded get their PID captured on the next hook
+- "Nouvelle session Claude Code…" now prefers `ptyxis --tab claude`
+  (opens a new tab in an existing ptyxis window when available)
+
 ### v1.13.0 — Top projects, transcript open, confetti, new session (2026-05-20)
 
 - New popup row "Top projets : X 8k · Y 3k · Z 1k" — daily token usage
