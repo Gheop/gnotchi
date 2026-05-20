@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SETTINGS="${HOME}/.claude/settings.json"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}"
+SETTINGS="${CLAUDE_DIR}/settings.json"
 [ -f "$SETTINGS" ] || { echo "rien à retirer"; exit 0; }
 python3 - "$SETTINGS" <<'PY'
 import json, os, re, sys

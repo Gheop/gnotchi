@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Pose les hooks gnotchi dans ~/.claude/settings.json (idempotent, avec backup).
+# Pose les hooks gnotchi dans $CLAUDE_CONFIG_DIR/settings.json (par défaut
+# ~/.claude/settings.json), idempotent et avec backup.
 set -euo pipefail
-SETTINGS="${HOME}/.claude/settings.json"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-${HOME}/.claude}"
+SETTINGS="${CLAUDE_DIR}/settings.json"
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EMIT="${EMIT:-$SELF_DIR/gnotchi-emit}"
 RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
-mkdir -p "${HOME}/.claude"
+mkdir -p "${CLAUDE_DIR}"
 [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
 [ -f "${SETTINGS}.gnotchi.bak" ] || cp "$SETTINGS" "${SETTINGS}.gnotchi.bak"
 { printf '{"emotion_mode":"local"}\n' > "${RUNTIME}/gnotchi.conf"; } 2>/dev/null || true

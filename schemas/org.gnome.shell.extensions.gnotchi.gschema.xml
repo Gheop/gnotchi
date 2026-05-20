@@ -29,5 +29,10 @@
       <summary>Famille de sprites</summary>
       <description>Famille de sprites. Seule la valeur 'classic' est supportée dans cette version.</description>
     </key>
+    <key name="hide-when-idle" type="b">
+      <default>false</default>
+      <summary>Cacher l'icône quand aucune session n'est active</summary>
+      <description>Si activé, l'icône gnotchi disparaît du top bar tant qu'aucune session Claude Code n'est en cours.</description>
+    </key>
   </schema>
 </schemalist>

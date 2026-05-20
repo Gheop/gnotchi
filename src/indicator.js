@@ -1,6 +1,8 @@
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
+import Clutter from 'gi://Clutter';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { Mascot } from './mascot.js';
@@ -18,10 +20,17 @@ class Indicator extends PanelMenu.Button {
         this._assetsDir = assetsDir;
         this._mascots = new Map(); // id -> Mascot (top bar)
         this._islandMascots = new Map(); // id -> Mascot (popup)
+        this._activity = new Map(); // id -> string (pour le tooltip de survol)
         this._feed = [];
         this._working = new Set();
         this._spinnerId = 0;
         this._verb = null;
+        this._hideWhenIdle = false;
+        this._tooltip = new St.Label({
+            visible: false,
+            style_class: 'dash-label',
+        });
+        Main.layoutManager.addChrome(this._tooltip);
 
         this._box = new St.BoxLayout({ style_class: 'gnotchi-box' });
         this.add_child(this._box);
@@ -67,12 +76,14 @@ class Indicator extends PanelMenu.Button {
             m.setSeed(id);
             this._mascots.set(id, m);
             this._box.add_child(m);
+            this._attachTooltip(m, id);
         }
         const im = new Mascot(this._assetsDir, ISLAND_MASCOT_SIZE);
         im.setSeed(id);
         this._islandMascots.set(id, im);
         this._island.add_child(im);
         this._refreshHeader();
+        this._updateVisibility();
     }
 
     updateSession(id, state) {
@@ -82,6 +93,7 @@ class Indicator extends PanelMenu.Button {
         const im = this._islandMascots.get(id);
         if (im)
             im.setState(state.activity, state.mood);
+        this._activity.set(id, state.activity);
         if (state.activity === 'working')
             this._working.add(id);
         else
@@ -102,8 +114,53 @@ class Indicator extends PanelMenu.Button {
             im.destroy();
             this._islandMascots.delete(id);
         }
+        this._activity.delete(id);
         this._working.delete(id);
         this._syncSpinner();
+        this._updateVisibility();
+    }
+
+    setHideWhenIdle(on) {
+        this._hideWhenIdle = !!on;
+        this._updateVisibility();
+    }
+
+    _updateVisibility() {
+        if (!this._hideWhenIdle) {
+            this.show();
+            return;
+        }
+        this.visible = this._islandMascots.size > 0;
+    }
+
+    _attachTooltip(actor, id) {
+        actor.reactive = true;
+        actor.track_hover = true;
+        actor.connect('notify::hover', () => {
+            if (actor.hover)
+                this._showTooltip(actor, id);
+            else
+                this._tooltip.hide();
+        });
+    }
+
+    _showTooltip(actor, id) {
+        const activity = this._activity.get(id) ?? 'idle';
+        this._tooltip.set_text(`${id.slice(0, 8)} · ${activity}`);
+        const [x, y] = actor.get_transformed_position();
+        const w = actor.get_width();
+        const h = actor.get_height();
+        // Affiche pour mesurer, puis recale (-tooltipWidth/2 + actorWidth/2).
+        this._tooltip.opacity = 0;
+        this._tooltip.show();
+        const tw = this._tooltip.get_width();
+        const tx = Math.max(8, Math.round(x + w / 2 - tw / 2));
+        this._tooltip.set_position(tx, Math.round(y + h + 4));
+        this._tooltip.ease({
+            opacity: 255,
+            duration: 120,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
     }
 
     pushFeed(msg) {
@@ -163,6 +220,11 @@ class Indicator extends PanelMenu.Button {
     destroy() {
         this._stopSpinner();
         this._usage.destroy();
+        if (this._tooltip) {
+            Main.layoutManager.removeChrome(this._tooltip);
+            this._tooltip.destroy();
+            this._tooltip = null;
+        }
         for (const m of this._mascots.values()) {
             this._box.remove_child(m);
             m.destroy();

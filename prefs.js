@@ -39,9 +39,18 @@ export default class GnotchiPrefs extends ExtensionPreferences {
         settings.bind('max-mascots', maxRow, 'value', Gio.SettingsBindFlags.DEFAULT);
         behavior.add(maxRow);
 
+        const hideRow = new Adw.SwitchRow({
+            title: 'Cacher l’icône quand aucune session active',
+            subtitle: 'L’extension reste en place ; l’icône réapparaît au démarrage d’une session',
+        });
+        settings.bind('hide-when-idle', hideRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behavior.add(hideRow);
+
         const diag = new Adw.PreferencesGroup({ title: 'Diagnostic' });
         page.add(diag);
-        const settingsPath = `${GLib.get_home_dir()}/.claude/settings.json`;
+        const claudeDir = GLib.getenv('CLAUDE_CONFIG_DIR') ||
+            `${GLib.get_home_dir()}/.claude`;
+        const settingsPath = `${claudeDir}/settings.json`;
         const emit = GLib.build_filenamev([this.path, 'tools', 'gnotchi-emit']);
 
         const stateRow = new Adw.ActionRow({ title: 'Hooks Claude Code' });

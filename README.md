@@ -93,6 +93,17 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.9.0 — Three quick wins (2026-05-20)
+
+- New preference "Hide when no session is active": the gnotchi icon vanishes
+  from the top bar while no Claude Code session is running and comes back
+  the moment one starts
+- `$CLAUDE_CONFIG_DIR` is now honored everywhere it matters (auto-install,
+  Preferences diagnostic, usage tracker, install/uninstall scripts) — falls
+  back to `~/.claude` when unset
+- Hover a top-bar mascot to see a tooltip with the short session id and the
+  current activity
+
 ### v1.8.1 — Popup garden overflow fix (2026-05-20)
 
 - The popup grass island is now tiled at a fixed 64×64 size and clipped to

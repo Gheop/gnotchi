@@ -47,8 +47,9 @@ export class UsageTracker {
         try {
             const now = Date.now();
             const since = startOfTodayMs(now);
-            const root = GLib.build_filenamev(
-                [GLib.get_home_dir(), '.claude', 'projects']);
+            const claudeDir = GLib.getenv('CLAUDE_CONFIG_DIR') ||
+                GLib.build_filenamev([GLib.get_home_dir(), '.claude']);
+            const root = GLib.build_filenamev([claudeDir, 'projects']);
             const files = await this._listToday(root, since);
             files.sort((a, b) => b.mtime - a.mtime);
             const skipped = Math.max(0, files.length - MAX_FILES);

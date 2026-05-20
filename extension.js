@@ -13,14 +13,18 @@ export default class GnotchiExtension extends Extension {
         this._settings = this.getSettings();
         this._writeRuntimeConf();
         this._ensureHooks();
-        this._settingsId = this._settings.connect('changed::emotion-mode',
-            () => this._writeRuntimeConf());
+        this._settingsIds = [];
+        this._settingsIds.push(this._settings.connect('changed::emotion-mode',
+            () => this._writeRuntimeConf()));
 
         const idleMs = this._settings.get_int('idle-timeout-minutes') * 60000;
         this._maxMascots = this._settings.get_int('max-mascots');
 
         const assetsDir = GLib.build_filenamev([this.path, 'assets']);
         this._indicator = new Indicator(assetsDir, () => this.openPreferences());
+        this._indicator.setHideWhenIdle(this._settings.get_boolean('hide-when-idle'));
+        this._settingsIds.push(this._settings.connect('changed::hide-when-idle',
+            () => this._indicator.setHideWhenIdle(this._settings.get_boolean('hide-when-idle'))));
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._mgr = new SessionManager(idleMs);
@@ -66,9 +70,11 @@ export default class GnotchiExtension extends Extension {
             this._indicator = null;
         }
         clearSpriteCache();
-        if (this._settingsId)
-            this._settings?.disconnect(this._settingsId);
-        this._settingsId = 0;
+        if (this._settingsIds && this._settings) {
+            for (const id of this._settingsIds)
+                this._settings.disconnect(id);
+        }
+        this._settingsIds = null;
         this._settings = null;
     }
 
@@ -86,7 +92,9 @@ export default class GnotchiExtension extends Extension {
     _ensureHooks() {
         try {
             const emit = GLib.build_filenamev([this.path, 'tools', 'gnotchi-emit']);
-            const path = GLib.build_filenamev([GLib.get_home_dir(), '.claude', 'settings.json']);
+            const claudeDir = GLib.getenv('CLAUDE_CONFIG_DIR') ||
+                GLib.build_filenamev([GLib.get_home_dir(), '.claude']);
+            const path = GLib.build_filenamev([claudeDir, 'settings.json']);
             const file = Gio.File.new_for_path(path);
             let obj = {};
             if (file.query_exists(null)) {

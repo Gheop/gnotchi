@@ -79,3 +79,24 @@ test "$RC" -ne 0 \
   && ! echo "$ERR" | grep -qi "Traceback" \
   && test "$(cat "$TMP/.claude/settings.json")" = 'pas du json' \
   && echo "ok JSON invalide géré proprement"
+
+# CLAUDE_CONFIG_DIR : si l'env var est posée, install/uninstall ciblent ce path
+rm -rf "$TMP/.claude" "$TMP/custom"
+mkdir -p "$TMP/custom"
+echo '{"model":"opus"}' > "$TMP/custom/settings.json"
+CLAUDE_CONFIG_DIR="$TMP/custom" EMIT=/some/path/gnotchi-emit \
+  XDG_RUNTIME_DIR="$TMP" bash ./tools/install-hooks.sh >/dev/null
+test ! -f "$TMP/.claude/settings.json" \
+  || { echo "FAIL: ~/.claude/settings.json créé alors que CLAUDE_CONFIG_DIR posé"; exit 1; }
+python3 - "$TMP/custom/settings.json" <<'PY'
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert "Stop" in s["hooks"], "hook posé dans CLAUDE_CONFIG_DIR"
+PY
+CLAUDE_CONFIG_DIR="$TMP/custom" bash ./tools/uninstall-hooks.sh >/dev/null
+python3 - "$TMP/custom/settings.json" <<'PY'
+import json, sys
+s = json.load(open(sys.argv[1]))
+assert "gnotchi-emit" not in json.dumps(s.get("hooks", {})), "uninstall respecte CLAUDE_CONFIG_DIR"
+PY
+echo "ok CLAUDE_CONFIG_DIR respecté par install/uninstall"
