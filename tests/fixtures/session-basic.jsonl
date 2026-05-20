@@ -1,0 +1,7 @@
+{"event":"SessionStart","session_id":"sess-a","cwd":"/home/sib/src/gnotchi"}
+{"event":"UserPromptSubmit","session_id":"sess-a","cwd":"/home/sib/src/gnotchi","data":{"emotion":"happy"}}
+{"event":"PreToolUse","session_id":"sess-a","cwd":"/home/sib/src/gnotchi","data":{"tool_name":"Edit"}}
+{"event":"Notification","session_id":"sess-a","cwd":"/home/sib/src/gnotchi"}
+{"event":"Stop","session_id":"sess-a","cwd":"/home/sib/src/gnotchi"}
+{"event":"PreCompact","session_id":"sess-a","cwd":"/home/sib/src/gnotchi"}
+{"event":"SessionEnd","session_id":"sess-a","cwd":"/home/sib/src/gnotchi"}

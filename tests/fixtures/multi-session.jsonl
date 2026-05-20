@@ -1,0 +1,6 @@
+{"event":"SessionStart","session_id":"sess-a","cwd":"/home/sib/proj-a"}
+{"event":"SessionStart","session_id":"sess-b","cwd":"/home/sib/proj-b"}
+{"event":"UserPromptSubmit","session_id":"sess-a","cwd":"/home/sib/proj-a","data":{"emotion":"sad"}}
+{"event":"PreToolUse","session_id":"sess-b","cwd":"/home/sib/proj-b"}
+{"event":"Emotion","session_id":"sess-a","cwd":"/home/sib/proj-a","data":{"emotion":"elated","source":"headless"}}
+{"event":"SessionEnd","session_id":"sess-b","cwd":"/home/sib/proj-b"}

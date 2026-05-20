@@ -1,0 +1,12 @@
+# Local scratch and worktrees
+.superpowers/
+.worktrees/
+
+# GNOME Shell / build
+schemas/gschemas.compiled
+*.zip
+
+# OS / éditeurs
+.DS_Store
+*.swp
+*~

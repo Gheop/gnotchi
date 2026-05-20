@@ -1,0 +1,9 @@
+{
+  "uuid": "gnotchi@gheop.github",
+  "name": "gnotchi",
+  "description": "Une mascotte animée par session Claude Code dans le top bar, pilotée par les hooks Claude Code.",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.gnotchi",
+  "url": "https://github.com/gheop/gnotchi",
+  "version": 11
+}

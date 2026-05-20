@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <enum id="org.gnome.shell.extensions.gnotchi.emotion-mode">
+    <value nick="off" value="0"/>
+    <value nick="local" value="1"/>
+    <value nick="local-headless" value="2"/>
+  </enum>
+  <schema id="org.gnome.shell.extensions.gnotchi"
+          path="/org/gnome/shell/extensions/gnotchi/">
+    <key name="emotion-mode" enum="org.gnome.shell.extensions.gnotchi.emotion-mode">
+      <default>'local'</default>
+      <summary>Mode de calcul de l'humeur</summary>
+      <description>off : aucune humeur. local : heuristique locale. local-headless : heuristique + raffinement via claude -p.</description>
+    </key>
+    <key name="idle-timeout-minutes" type="i">
+      <default>30</default>
+      <range min="1" max="240"/>
+      <summary>Minutes d'inactivité avant retrait d'une mascotte</summary>
+      <description>Durée d'inactivité d'une session avant retrait automatique de sa mascotte, en minutes.</description>
+    </key>
+    <key name="max-mascots" type="i">
+      <default>8</default>
+      <range min="1" max="20"/>
+      <summary>Nombre maximum de mascottes dans le top bar</summary>
+      <description>Nombre maximum de mascottes affichées simultanément dans le top bar.</description>
+    </key>
+    <key name="sprite-family" type="s">
+      <default>'classic'</default>
+      <summary>Famille de sprites</summary>
+      <description>Famille de sprites. Seule la valeur 'classic' est supportée dans cette version.</description>
+    </key>
+  </schema>
+</schemalist>

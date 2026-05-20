@@ -1,0 +1,8 @@
+Les sprites de assets/sprites/*.png et assets/grass.png proviennent du
+projet notchi de sk-ruban (https://github.com/sk-ruban/notchi), sous
+licence GPL-3.0.
+
+Repris tels quels au commit e55a7e557b379db3d0971384ec6682453713898a
+(chemin notchi/notchi/Assets.xcassets), personnage « claude » uniquement.
+
+gnotchi est distribué sous GPL-3.0 (voir LICENSE) en conséquence.
