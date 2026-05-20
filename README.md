@@ -103,6 +103,13 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.12.0 — Richer hover tooltip (2026-05-20)
+
+- Hover tooltip now shows `${cwd_basename} · ${activity} · ${duration}`
+  (falls back to short id when no cwd has been seen yet for that session)
+- Duration is the time spent in the current activity (`12s`, `5m`, `2h15m`,
+  `3d4h`), tracked from each activity transition
+
 ### v1.11.0 — Feed filter, copy session id, CI (2026-05-20)
 
 - New "Sessions actives (N)" submenu in the popup. Each entry copies the

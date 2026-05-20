@@ -10,6 +10,7 @@ import { nextVerb } from '../lib/spinnerVerbs.js';
 import { UsageTracker } from './usageTracker.js';
 import { humanize, sparkline } from '../lib/usage.js';
 import { shouldDisplay } from '../lib/feed.js';
+import { humanDuration } from '../lib/duration.js';
 
 const FEED_MAX = 12;
 const ISLAND_MASCOT_SIZE = 48;
@@ -23,6 +24,8 @@ class Indicator extends PanelMenu.Button {
         this._mascots = new Map(); // id -> Mascot (top bar)
         this._islandMascots = new Map(); // id -> Mascot (popup)
         this._activity = new Map(); // id -> string (pour le tooltip de survol)
+        this._cwd = new Map(); // id -> cwd (dernier connu via feed)
+        this._stateSince = new Map(); // id -> ms du dernier changement d'activité
         this._terminalPids = new Map(); // id -> pid (pour le clic terminal jump)
         this._feed = [];
         this._working = new Set();
@@ -81,6 +84,8 @@ class Indicator extends PanelMenu.Button {
     addSession(id, maxMascots, terminalPid) {
         if (Number.isFinite(terminalPid) && terminalPid > 0)
             this._terminalPids.set(id, terminalPid);
+        if (!this._stateSince.has(id))
+            this._stateSince.set(id, Date.now());
         if (this._mascots.size < maxMascots) {
             const m = new Mascot(this._assetsDir);
             m.setSeed(id);
@@ -105,6 +110,8 @@ class Indicator extends PanelMenu.Button {
         const im = this._islandMascots.get(id);
         if (im)
             im.setState(state.activity, state.mood);
+        if (this._activity.get(id) !== state.activity)
+            this._stateSince.set(id, Date.now());
         this._activity.set(id, state.activity);
         if (state.activity === 'working')
             this._working.add(id);
@@ -127,6 +134,8 @@ class Indicator extends PanelMenu.Button {
             this._islandMascots.delete(id);
         }
         this._activity.delete(id);
+        this._cwd.delete(id);
+        this._stateSince.delete(id);
         this._terminalPids.delete(id);
         this._working.delete(id);
         this._syncSpinner();
@@ -193,7 +202,11 @@ class Indicator extends PanelMenu.Button {
 
     _showTooltip(actor, id) {
         const activity = this._activity.get(id) ?? 'idle';
-        this._tooltip.set_text(`${id.slice(0, 8)} · ${activity}`);
+        const cwd = this._cwd.get(id);
+        const head = cwd ? GLib.path_get_basename(cwd) : id.slice(0, 8);
+        const since = this._stateSince.get(id);
+        const dur = since ? ` · ${humanDuration(Date.now() - since)}` : '';
+        this._tooltip.set_text(`${head} · ${activity}${dur}`);
         const [x, y] = actor.get_transformed_position();
         const w = actor.get_width();
         const h = actor.get_height();
@@ -211,6 +224,8 @@ class Indicator extends PanelMenu.Button {
     }
 
     pushFeed(msg) {
+        if (msg && msg.cwd && msg.session_id)
+            this._cwd.set(msg.session_id, msg.cwd);
         if (!shouldDisplay(msg, this._feedFilter))
             return;
         const proj = msg.cwd ? GLib.path_get_basename(msg.cwd) : msg.session_id.slice(0, 6);

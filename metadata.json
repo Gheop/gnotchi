@@ -5,5 +5,5 @@
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.gnotchi",
   "url": "https://github.com/gheop/gnotchi",
-  "version": 14
+  "version": 15
 }
