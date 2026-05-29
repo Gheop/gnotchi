@@ -103,6 +103,17 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.14.0 — Meditating idle pose (2026-05-29)
+
+- New `claude_idle_meditating.png` sprite — a floating zen pose with arms
+  extended laterally and a permanent wink, extracted from the official
+  notchi promo video at 4K and downscaled to the 64×64 sprite format
+- When the mascot enters `idle` with a `neutral` mood, it has a 1/3
+  chance of using the meditating pose instead of the classic one. Choice
+  is deterministic per (session seed, entry count) so sessions desync
+  naturally and a same session keeps the same pose for the whole idle
+  span
+
 ### v1.13.1 — Discoverable session actions, ptyxis tab (2026-05-20)
 
 - Each entry under "Sessions actives" is now a submenu with three actions:

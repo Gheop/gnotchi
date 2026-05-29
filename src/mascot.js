@@ -6,6 +6,7 @@ import Gio from 'gi://Gio';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import { spriteFile } from '../lib/spriteMap.js';
 import { hash, isMirrored, entryMirrored } from '../lib/mirrorPolicy.js';
+import { chooseIdleMood } from '../lib/idleVariant.js';
 
 const SIZE = 22;
 const FPS_MS = 100;       // 10 fps, cf. notchi SpriteSheetView
@@ -113,11 +114,13 @@ class Mascot extends St.Widget {
         if (activity === this._activity && mood === this._mood)
             return;
         const prevActivity = this._activity;
-        const file = spriteFile(activity, mood);
         if (activity !== prevActivity) {
             this._entrySeq++;
             this._entryMirrored = entryMirrored(this._seed, activity, this._entrySeq);
         }
+        const effectiveMood = activity === 'idle'
+            ? chooseIdleMood(mood, this._seed, this._entrySeq) : mood;
+        const file = spriteFile(activity, effectiveMood);
         this._activity = activity;
         this._mood = mood;
 

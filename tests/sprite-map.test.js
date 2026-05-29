@@ -13,6 +13,12 @@ test('idle a les 5 humeurs', () => {
     assertEqual(spriteFile('idle', 'sobbing'), 'claude_idle_sob.png');
 });
 
+test('idle/meditating mappe vers le sprite extrait de la vidéo notchi', () => {
+    assertEqual(spriteFile('idle', 'meditating'), 'claude_idle_meditating.png');
+    const path = 'assets/sprites/claude_idle_meditating.png';
+    assertEqual(Gio.File.new_for_path(path).query_exists(null), true);
+});
+
 test('working/waiting : elated retombe sur happy', () => {
     assertEqual(spriteFile('working', 'elated'), 'claude_working_happy.png');
     assertEqual(spriteFile('waiting', 'elated'), 'claude_waiting_happy.png');
