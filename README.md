@@ -103,6 +103,16 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.15.0 — Cowboy lasso easter-egg (2026-05-30)
+
+- New `claude_idle_cowboy.png` sprite — the mascot wearing a brown cowboy
+  hat and twirling a lasso, a 12-frame cycle extracted at 4K from the
+  "agent view" Claude Code intro clip
+- Rare idle easter-egg: on `idle`/`neutral`, buckets are now cowboy 1/12,
+  meditating 4/12, classic the rest. Same deterministic per-session choice
+  as the meditating pose, so the cowboy shows up once in a while as a
+  surprise
+
 ### v1.14.0 — Meditating idle pose (2026-05-29)
 
 - New `claude_idle_meditating.png` sprite — a floating zen pose with arms

@@ -8,12 +8,23 @@ test('mood non-neutral passe tel quel', () => {
     }
 });
 
-test('neutral retourne soit neutral soit meditating', () => {
+test('neutral retourne neutral, meditating ou cowboy', () => {
     for (let s = 0; s < 50; s++)
         for (let e = 0; e < 5; e++) {
             const r = chooseIdleMood('neutral', s, e);
-            assertEqual(r === 'neutral' || r === 'meditating', true);
+            assertEqual(r === 'neutral' || r === 'meditating' || r === 'cowboy', true);
         }
+});
+
+test('cowboy est rare (~1/12) mais atteignable', () => {
+    let cowboy = 0;
+    const N = 600;
+    for (let i = 0; i < N; i++) {
+        if (chooseIdleMood('neutral', i, 1) === 'cowboy')
+            cowboy++;
+    }
+    // ~1/12 ≈ 8 %. Tolérance large : entre 2 % et 18 %.
+    assertEqual(cowboy > N * 0.02 && cowboy < N * 0.18, true);
 });
 
 test('determinisme : meme (seed, entrySeq) -> meme resultat', () => {

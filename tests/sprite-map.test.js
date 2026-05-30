@@ -19,6 +19,15 @@ test('idle/meditating mappe vers le sprite extrait de la vidéo notchi', () => {
     assertEqual(Gio.File.new_for_path(path).query_exists(null), true);
 });
 
+test('idle/cowboy mappe vers le sprite cowboy au lasso', () => {
+    assertEqual(spriteFile('idle', 'cowboy'), 'claude_idle_cowboy.png');
+    const path = 'assets/sprites/claude_idle_cowboy.png';
+    assertEqual(Gio.File.new_for_path(path).query_exists(null), true);
+    const { w, h } = pngSize(path);
+    assertEqual(h, 64);
+    assertEqual(w % 64 === 0 && w >= 64, true);
+});
+
 test('working/waiting : elated retombe sur happy', () => {
     assertEqual(spriteFile('working', 'elated'), 'claude_working_happy.png');
     assertEqual(spriteFile('waiting', 'elated'), 'claude_waiting_happy.png');
