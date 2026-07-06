@@ -58,5 +58,15 @@
       <summary>Petite anim de confettis à la fin d'un tour d'assistant</summary>
       <description>Si activé, quelques confettis colorés tombent depuis la mascotte panel quand un événement Stop arrive.</description>
     </key>
+    <key name="evolution-enabled" type="b">
+      <default>true</default>
+      <summary>Évolution des pets par projet</summary>
+      <description>Si activé, chaque projet a une créature qui gagne de l'XP (outil +1, tour +10) et grandit à travers des stades de vie. Désactivé : mascottes à taille normale, aucun pet.</description>
+    </key>
+    <key name="notify-on-levelup" type="b">
+      <default>false</default>
+      <summary>Notification au changement de stade d'un pet</summary>
+      <description>Si activé, une notification GNOME est émise quand le pet d'un projet passe à un stade de vie supérieur.</description>
+    </key>
   </schema>
 </schemalist>

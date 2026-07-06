@@ -53,6 +53,13 @@ export default class GnotchiPrefs extends ExtensionPreferences {
         settings.bind('celebrate-on-stop', celebRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         behavior.add(celebRow);
 
+        const evoRow = new Adw.SwitchRow({
+            title: 'Évolution des pets',
+            subtitle: 'Une créature par projet qui grandit avec l’activité (œuf → adulte)',
+        });
+        settings.bind('evolution-enabled', evoRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        behavior.add(evoRow);
+
         const feedModes = ['all', 'significant'];
         const feedRow = new Adw.ComboRow({
             title: 'Flux d’activité du popup',
@@ -79,6 +86,12 @@ export default class GnotchiPrefs extends ExtensionPreferences {
         });
         settings.bind('notify-on-error', errRow, 'active', Gio.SettingsBindFlags.DEFAULT);
         notify.add(errRow);
+        const levelupRow = new Adw.SwitchRow({
+            title: 'Au changement de stade d’un pet',
+            subtitle: 'Notification GNOME quand un pet passe un stade de vie',
+        });
+        settings.bind('notify-on-levelup', levelupRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        notify.add(levelupRow);
 
         const diag = new Adw.PreferencesGroup({ title: 'Diagnostic' });
         page.add(diag);

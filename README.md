@@ -16,6 +16,12 @@ States: `idle`, `working`, `waiting`, `sleeping`, `compacting`, `waving`
 Click any mascot to open a popup with a grass island, an activity feed,
 a rolling activity verb, and a local token-usage estimate for today.
 
+Each project also grows a small pet through four life stages (egg → baby →
+teen → adult): it earns XP as Claude works, "eats" tokens on each turn, and
+gets peckish when a project goes quiet. Stages persist across days in
+`~/.local/share/gnotchi/pets.json`, one pet per project. Cozy by design:
+stages never regress.
+
 ## Requirements
 
 - GNOME Shell 50, Wayland or Xorg
@@ -102,6 +108,22 @@ gnotchi is released under GPL-3.0 (see `LICENSE`). The sprite assets in
 also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
+
+### v1.16.0 — Pets qui évoluent + tokivore (2026-07-06)
+
+- Chaque projet a désormais une créature qui grandit à travers quatre
+  stades de vie (œuf, bébé, ado, adulte). Elle gagne de l'XP quand Claude
+  travaille : chaque outil vaut +1, chaque tour terminé +10. Les stades
+  sont persistés dans `~/.local/share/gnotchi/pets.json`, d'un jour à
+  l'autre, une créature par projet (clé = cwd)
+- Tokivore : la mascotte fait un petit « nom » (squash + miette) à chaque
+  bouchée et prend un air affamé quand un projet reste silencieux plusieurs
+  heures. Purement cosmétique, les stades ne régressent jamais
+- L'œuf éclôt en fondu au franchissement des 50 XP ; la mascotte grossit à
+  chaque nouveau stade, spectaculaire dans le popup
+- Nouvelle ligne popup « Pets : projet 🐣 xp », top 3 par XP
+- Deux préférences : « Évolution des pets » (défaut activé) et « Au
+  changement de stade d'un pet » (notification, défaut désactivé)
 
 ### v1.15.0 — Cowboy lasso easter-egg (2026-05-30)
 
