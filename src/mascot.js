@@ -193,6 +193,45 @@ class Mascot extends St.Widget {
         }
     }
 
+    // « Nom » : petit squash vertical + une miette qui tombe. Débounce 1s
+    // pour ne pas spammer pendant une rafale d'outils.
+    nom() {
+        const now = this._nowSec();
+        if (this._lastNomSec && now - this._lastNomSec < 1)
+            return;
+        this._lastNomSec = now;
+
+        this._icon.set_pivot_point(0.5, 1);
+        this._icon.remove_transition('scale-y');
+        this._icon.scale_y = 0.82;
+        this._icon.ease({
+            scale_y: 1,
+            duration: 220,
+            mode: Clutter.AnimationMode.EASE_OUT_BACK,
+        });
+
+        const crumb = new St.Widget({
+            style: 'background-color: #c9a24b; border-radius: 2px;',
+            width: 3, height: 3, reactive: false,
+        });
+        this.add_child(crumb);
+        crumb.set_position(Math.round(this._size / 2), Math.round(this._size / 3));
+        crumb.ease({
+            y: this._size,
+            opacity: 0,
+            duration: 300,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: () => {
+                this.remove_child(crumb);
+                crumb.destroy();
+            },
+        });
+    }
+
+    celebrateLevelUp() {
+        this._playGlow();
+    }
+
     _nowSec() {
         return Math.floor(GLib.get_real_time() / 1e6);
     }
