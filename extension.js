@@ -6,6 +6,7 @@ import { SocketServer } from './src/socketServer.js';
 import { SessionManager } from './src/sessionManager.js';
 import { Indicator } from './src/indicator.js';
 import { clearSpriteCache } from './src/mascot.js';
+import { PetStore } from './src/petStore.js';
 import { withHooks, needsWrite } from './lib/hooksConfig.js';
 
 function focusWindowByPid(pid) {
@@ -61,6 +62,20 @@ export default class GnotchiExtension extends Extension {
             () => this._indicator.setCelebrateOnStop(this._settings.get_boolean('celebrate-on-stop'))));
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
+        this._petStore = new PetStore();
+        this._petStore.load();
+        this._indicator.setPetStoreRef(this._petStore);
+        this._evolutionEnabled = this._settings.get_boolean('evolution-enabled');
+        this._indicator.setEvolutionEnabled(this._evolutionEnabled);
+        this._notifyOnLevelup = this._settings.get_boolean('notify-on-levelup');
+        this._settingsIds.push(this._settings.connect('changed::evolution-enabled',
+            () => {
+                this._evolutionEnabled = this._settings.get_boolean('evolution-enabled');
+                this._indicator.setEvolutionEnabled(this._evolutionEnabled);
+            }));
+        this._settingsIds.push(this._settings.connect('changed::notify-on-levelup',
+            () => { this._notifyOnLevelup = this._settings.get_boolean('notify-on-levelup'); }));
+
         this._mgr = new SessionManager(idleMs);
         this._mgrIds = [
             this._mgr.connect('session-added', (_m, id) =>
@@ -84,6 +99,17 @@ export default class GnotchiExtension extends Extension {
                 if (typeof transcript === 'string' && transcript)
                     this._indicator.setTranscriptPath(msg.session_id, transcript);
                 this._indicator.pushFeed(msg);
+                if (this._evolutionEnabled && msg.cwd) {
+                    const now = Date.now();
+                    const r = this._petStore.onEvent(msg.cwd, msg.event, msg.data, now);
+                    if (r) {
+                        this._indicator.applyPet(msg.cwd, r);
+                        if (r.leveledUp && this._notifyOnLevelup) {
+                            const proj = GLib.path_get_basename(msg.cwd);
+                            Main.notify('gnotchi', `${proj} : nouveau stade (${r.stage}) !`);
+                        }
+                    }
+                }
                 this._maybeNotify(msg);
             }),
         ];
@@ -115,6 +141,10 @@ export default class GnotchiExtension extends Extension {
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
+        }
+        if (this._petStore) {
+            this._petStore.destroy();
+            this._petStore = null;
         }
         clearSpriteCache();
         if (this._settingsIds && this._settings) {

@@ -10,6 +10,7 @@ import { Mascot } from './mascot.js';
 import { nextVerb } from '../lib/spinnerVerbs.js';
 import { UsageTracker } from './usageTracker.js';
 import { humanize, sparkline, prettyProject } from '../lib/usage.js';
+import { stageEmoji, hungerMood } from '../lib/pet.js';
 import { shouldDisplay } from '../lib/feed.js';
 import { humanDuration } from '../lib/duration.js';
 import { candidateArgvs } from '../lib/terminalLauncher.js';
@@ -38,6 +39,10 @@ class Indicator extends PanelMenu.Button {
         this._hideWhenIdle = false;
         this._feedFilter = 'all';
         this._celebrate = true;
+        this._evolutionEnabled = true;
+        this._petStages = new Map(); // cwd -> stage
+        this._petHunger = new Map(); // id -> level
+        this._petStore = null;       // référence lecture seule posée par l'extension
         this._tooltip = new St.Label({
             visible: false,
             style_class: 'dash-label',
@@ -79,13 +84,17 @@ class Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._sessionsMenu);
         this._topProjectsRow = new PopupMenu.PopupMenuItem('Top projets : …', { reactive: false });
         this.menu.addMenuItem(this._topProjectsRow);
+        this._petsRow = new PopupMenu.PopupMenuItem('Pets : …', { reactive: false });
+        this.menu.addMenuItem(this._petsRow);
 
         const newSession = new PopupMenu.PopupMenuItem('Nouvelle session Claude Code…');
         newSession.connect('activate', () => this._launchClaude());
         this.menu.addMenuItem(newSession);
         this.menu.connect('open-state-changed', (_m, open) => {
-            if (open)
+            if (open) {
                 this._refreshUsage();
+                this._refreshPetsRow();
+            }
         });
         const prefsItem = new PopupMenu.PopupMenuItem('Préférences…');
         prefsItem.connect('activate', () => openPrefs());
@@ -109,18 +118,39 @@ class Indicator extends PanelMenu.Button {
         im.setSeed(id);
         this._islandMascots.set(id, im);
         this._island.add_child(im);
+
+        // stade + faim initiaux, dérivés du pet persisté pour ce cwd. Le cwd
+        // est déjà connu : pushFeed pose _cwd avant que session-added ne
+        // déclenche addSession.
+        const cwd0 = this._cwd.get(id);
+        const stage0 = (this._evolutionEnabled && cwd0)
+            ? (this._petStages.get(cwd0) ?? 'egg') : 'adult';
+        const level0 = (this._evolutionEnabled && cwd0 && this._petStore)
+            ? this._petStore.hungerFor(cwd0, Date.now()) : 0;
+        this._petHunger.set(id, level0);
+        const mood0 = hungerMood('neutral', level0);
+        const topM = this._mascots.get(id);
+        if (topM) {
+            topM.setStage(stage0);
+            topM.setState('idle', mood0);
+        }
+        im.setStage(stage0);
+        im.setState('idle', mood0);
+
         this._refreshHeader();
         this._refreshSessionsMenu();
         this._updateVisibility();
     }
 
     updateSession(id, state) {
+        const level = this._evolutionEnabled ? (this._petHunger.get(id) ?? 0) : 0;
+        const mood = hungerMood(state.mood, level);
         const m = this._mascots.get(id);
         if (m)
-            m.setState(state.activity, state.mood);
+            m.setState(state.activity, mood);
         const im = this._islandMascots.get(id);
         if (im)
-            im.setState(state.activity, state.mood);
+            im.setState(state.activity, mood);
         if (this._activity.get(id) !== state.activity)
             this._stateSince.set(id, Date.now());
         this._activity.set(id, state.activity);
@@ -150,6 +180,7 @@ class Indicator extends PanelMenu.Button {
         this._terminalPids.delete(id);
         this._transcripts.delete(id);
         this._working.delete(id);
+        this._petHunger.delete(id);
         this._syncSpinner();
         this._refreshSessionsMenu();
         this._updateVisibility();
@@ -313,6 +344,63 @@ class Indicator extends PanelMenu.Button {
 
     setCelebrateOnStop(on) {
         this._celebrate = !!on;
+    }
+
+    setEvolutionEnabled(on) {
+        this._evolutionEnabled = !!on;
+        if (!on) {
+            for (const m of this._mascots.values())
+                m.setStage('adult');
+            for (const m of this._islandMascots.values())
+                m.setStage('adult');
+        }
+        this._refreshPetsRow();
+    }
+
+    setPetStoreRef(store) {
+        this._petStore = store;
+    }
+
+    // Applique un résultat de pet (stade + anims) à toutes les mascottes du cwd.
+    applyPet(cwd, r) {
+        if (!this._evolutionEnabled)
+            return;
+        this._petStages.set(cwd, r.stage);
+        for (const [id, mcwd] of this._cwd.entries()) {
+            if (mcwd !== cwd)
+                continue;
+            if (r.justAte)
+                this._petHunger.set(id, 0); // il vient de manger : plus affamé
+            for (const map of [this._mascots, this._islandMascots]) {
+                const m = map.get(id);
+                if (!m)
+                    continue;
+                m.setStage(r.stage);
+                if (r.justAte)
+                    m.nom();
+                if (r.leveledUp)
+                    m.celebrateLevelUp();
+            }
+        }
+        this._refreshPetsRow();
+    }
+
+    _refreshPetsRow() {
+        if (!this._petsRow)
+            return;
+        if (!this._evolutionEnabled || !this._petStore) {
+            this._petsRow.label.set_text('Pets : —');
+            return;
+        }
+        const top = this._petStore.topPets(3);
+        if (!top.length) {
+            this._petsRow.label.set_text('Pets : —');
+            return;
+        }
+        const txt = top
+            .map(p => `${GLib.path_get_basename(p.cwd)} ${stageEmoji(p.stage)} ${p.xp}`)
+            .join(' · ');
+        this._petsRow.label.set_text(`Pets : ${txt}`);
     }
 
     celebrate(id) {
