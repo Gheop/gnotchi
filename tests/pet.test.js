@@ -2,6 +2,8 @@ import { test, assertEqual, assertTrue, run } from './harness.js';
 import {
     xpForEvent, stageForXp, newPet, applyEvent, hungerLevel,
     XP_PER_TOOL, XP_PER_TURN,
+    serializePets, parsePets, capPets,
+    stageIconSize, hungerMood, stageEmoji, PETS_VERSION,
 } from '../lib/pet.js';
 
 test('xpForEvent : outil +1, tour +10, reste 0', () => {
@@ -71,6 +73,69 @@ test('hungerLevel : seuils 2h / 8h', () => {
     assertEqual(hungerLevel(p, 2 * 3600000), 1);
     assertEqual(hungerLevel(p, 8 * 3600000 - 1), 1);
     assertEqual(hungerLevel(p, 8 * 3600000), 2);
+});
+
+test('serialize/parse : round-trip', () => {
+    const m = new Map([
+        ['/a', { xp: 340, bornTs: 100, lastFedTs: 200 }],
+        ['/b', { xp: 5, bornTs: 10, lastFedTs: 20 }],
+    ]);
+    const back = parsePets(serializePets(m));
+    assertEqual(back.get('/a'), { xp: 340, bornTs: 100, lastFedTs: 200 });
+    assertEqual(back.get('/b'), { xp: 5, bornTs: 10, lastFedTs: 20 });
+});
+
+test('parsePets : entrée corrompue -> map vide', () => {
+    assertEqual(parsePets('pas du json').size, 0);
+    assertEqual(parsePets('{}').size, 0);
+    assertEqual(parsePets('{"version":999,"pets":{}}').size, 0);
+    assertEqual(parsePets(JSON.stringify({ version: PETS_VERSION, pets: null })).size, 0);
+});
+
+test('parsePets : ignore les entrées invalides', () => {
+    const text = JSON.stringify({
+        version: PETS_VERSION,
+        pets: {
+            '/ok': { xp: 10, bornTs: 1, lastFedTs: 2 },
+            '/bad': { xp: -3, bornTs: 1, lastFedTs: 2 },
+            '/nan': { xp: 'x', bornTs: 1, lastFedTs: 2 },
+        },
+    });
+    const m = parsePets(text);
+    assertEqual(m.size, 1);
+    assertTrue(m.has('/ok'));
+});
+
+test('capPets : garde les lastFedTs les plus récents', () => {
+    const m = new Map([
+        ['/old', { xp: 1, bornTs: 0, lastFedTs: 100 }],
+        ['/mid', { xp: 1, bornTs: 0, lastFedTs: 200 }],
+        ['/new', { xp: 1, bornTs: 0, lastFedTs: 300 }],
+    ]);
+    const capped = capPets(m, 2);
+    assertEqual(capped.size, 2);
+    assertTrue(capped.has('/new'));
+    assertTrue(capped.has('/mid'));
+    assertTrue(!capped.has('/old'));
+});
+
+test('stageIconSize : croît avec le stade, borné à baseSize', () => {
+    assertTrue(stageIconSize('baby', 48) < stageIconSize('teen', 48));
+    assertTrue(stageIconSize('teen', 48) < stageIconSize('adult', 48));
+    assertEqual(stageIconSize('adult', 48), 48);
+    assertTrue(stageIconSize('egg', 22) >= 1);
+});
+
+test('hungerMood : affamé penche neutral vers sad, sinon inchangé', () => {
+    assertEqual(hungerMood('neutral', 2), 'sad');
+    assertEqual(hungerMood('neutral', 1), 'neutral');
+    assertEqual(hungerMood('happy', 2), 'happy');
+    assertEqual(hungerMood('sad', 0), 'sad');
+});
+
+test('stageEmoji : un emoji par stade', () => {
+    for (const s of ['egg', 'baby', 'teen', 'adult'])
+        assertTrue(typeof stageEmoji(s) === 'string' && stageEmoji(s).length > 0);
 });
 
 run();
