@@ -7,6 +7,7 @@ import GdkPixbuf from 'gi://GdkPixbuf';
 import { spriteFile } from '../lib/spriteMap.js';
 import { hash, isMirrored, entryMirrored } from '../lib/mirrorPolicy.js';
 import { chooseIdleMood } from '../lib/idleVariant.js';
+import { stageIconSize } from '../lib/pet.js';
 
 const SIZE = 22;
 const FPS_MS = 100;       // 10 fps, cf. notchi SpriteSheetView
@@ -70,6 +71,10 @@ class Mascot extends St.Widget {
         });
         this._assetsDir = assetsDir;
         this._size = size;
+        this._stage = 'adult';
+        this._egg = null;
+        this._hatchId = 0;
+        this._lastNomSec = 0;
 
         this._glow = new St.Widget({
             x_expand: true, y_expand: true, opacity: 0,
@@ -104,6 +109,88 @@ class Mascot extends St.Widget {
         this._seed = hash(String(sessionId));
         if (this._frames && this._frames.length > 0)
             this._frame = this._seed % this._frames.length;
+    }
+
+    // Applique un stade de vie : ajuste la taille du sprite, ou affiche
+    // l'œuf dessiné au stade 'egg'. Une transition egg -> autre déclenche
+    // l'éclosion.
+    setStage(stage) {
+        if (stage === this._stage)
+            return;
+        const hatching = this._stage === 'egg' && stage !== 'egg';
+        this._stage = stage;
+        const px = stageIconSize(stage, this._size);
+        this._icon.icon_size = px;
+        if (this._fadeIcon)
+            this._fadeIcon.icon_size = px;
+        if (stage === 'egg') {
+            this._showEgg(px);
+            return;
+        }
+        if (hatching)
+            this._hatch();
+        else
+            this._hideEgg();
+    }
+
+    _showEgg(px) {
+        this._icon.hide();
+        if (!this._egg) {
+            this._egg = new St.Widget({
+                style: 'background-color: #f4e4c1; border-radius: 999px 999px ' +
+                    '900px 900px; border: 1px solid #d9c39a;',
+                x_align: Clutter.ActorAlign.CENTER,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            this.add_child(this._egg);
+        }
+        this._egg.set_size(Math.round(px * 0.8), px);
+        this._egg.show();
+    }
+
+    _hideEgg() {
+        if (this._egg)
+            this._egg.hide();
+        this._icon.show();
+    }
+
+    // Éclosion : l'œuf tremble puis fond vers le sprite.
+    _hatch() {
+        this._icon.opacity = 0;
+        this._icon.show();
+        if (!this._egg) {
+            this._icon.opacity = 255;
+            return;
+        }
+        const egg = this._egg;
+        egg.set_pivot_point(0.5, 0.5);
+        let n = 0;
+        this._stopHatch();
+        this._hatchId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 70, () => {
+            egg.rotation_angle_z = (n % 2 === 0) ? 12 : -12;
+            if (++n >= 6) {
+                egg.rotation_angle_z = 0;
+                egg.ease({
+                    opacity: 0, duration: 200,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    onComplete: () => { egg.hide(); egg.opacity = 255; },
+                });
+                this._icon.ease({
+                    opacity: 255, duration: 250,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                });
+                this._hatchId = 0;
+                return GLib.SOURCE_REMOVE;
+            }
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    _stopHatch() {
+        if (this._hatchId) {
+            GLib.source_remove(this._hatchId);
+            this._hatchId = 0;
+        }
     }
 
     _nowSec() {
@@ -254,6 +341,7 @@ class Mascot extends St.Widget {
     destroy() {
         this._stopTimer();
         this._stopGlow();
+        this._stopHatch();
         if (this._fadeIcon) {
             this._fadeIcon.remove_all_transitions();
             this._fadeIcon.destroy();
