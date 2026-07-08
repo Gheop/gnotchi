@@ -201,10 +201,12 @@ class Mascot extends St.Widget {
             return;
         this._lastNomSec = now;
 
-        this._icon.set_pivot_point(0.5, 1);
-        this._icon.remove_transition('scale-y');
-        this._icon.scale_y = 0.82;
-        this._icon.ease({
+        // Au stade œuf, _icon est caché : c'est l'œuf qu'on fait tressauter.
+        const target = (this._stage === 'egg' && this._egg) ? this._egg : this._icon;
+        target.set_pivot_point(0.5, 1);
+        target.remove_transition('scale-y');
+        target.scale_y = 0.82;
+        target.ease({
             scale_y: 1,
             duration: 220,
             mode: Clutter.AnimationMode.EASE_OUT_BACK,
@@ -212,7 +214,7 @@ class Mascot extends St.Widget {
 
         const crumb = new St.Widget({
             style: 'background-color: #c9a24b; border-radius: 2px;',
-            width: 3, height: 3, reactive: false,
+            width: 4, height: 4, reactive: false,
         });
         this.add_child(crumb);
         crumb.set_position(Math.round(this._size / 2), Math.round(this._size / 3));
@@ -267,6 +269,23 @@ class Mascot extends St.Widget {
             this._finishHandoff();
             this._stopTimer();
             this._frames = null;
+            return;
+        }
+
+        // Au stade œuf, _icon est caché derrière l'œuf : un fondu peindrait
+        // un sprite visible par-dessus l'œuf à chaque changement d'activité.
+        // On adopte le sprite directement dans _icon (caché), prêt pour
+        // l'éclosion, sans créer d'icône de fondu.
+        if (this._stage === 'egg') {
+            this._finishHandoff();
+            this._frames = frames;
+            this._curFile = file;
+            this._frame = this._seed % frames.length;
+            this._icon.set_gicon(this._frames[this._frame]);
+            this._applyMirrorTo(this._icon);
+            this._startTimer();
+            if (enteringWaving)
+                this._playGlow();
             return;
         }
 

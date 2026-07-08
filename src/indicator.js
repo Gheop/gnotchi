@@ -40,7 +40,6 @@ class Indicator extends PanelMenu.Button {
         this._feedFilter = 'all';
         this._celebrate = true;
         this._evolutionEnabled = true;
-        this._petStages = new Map(); // cwd -> stage
         this._petHunger = new Map(); // id -> level
         this._petStore = null;       // référence lecture seule posée par l'extension
         this._tooltip = new St.Label({
@@ -123,8 +122,8 @@ class Indicator extends PanelMenu.Button {
         // est déjà connu : pushFeed pose _cwd avant que session-added ne
         // déclenche addSession.
         const cwd0 = this._cwd.get(id);
-        const stage0 = (this._evolutionEnabled && cwd0)
-            ? (this._petStages.get(cwd0) ?? 'egg') : 'adult';
+        const stage0 = (this._evolutionEnabled && cwd0 && this._petStore)
+            ? this._petStore.stageFor(cwd0) : 'adult';
         const level0 = (this._evolutionEnabled && cwd0 && this._petStore)
             ? this._petStore.hungerFor(cwd0, Date.now()) : 0;
         this._petHunger.set(id, level0);
@@ -365,7 +364,6 @@ class Indicator extends PanelMenu.Button {
     applyPet(cwd, r) {
         if (!this._evolutionEnabled)
             return;
-        this._petStages.set(cwd, r.stage);
         for (const [id, mcwd] of this._cwd.entries()) {
             if (mcwd !== cwd)
                 continue;

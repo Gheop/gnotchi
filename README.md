@@ -109,6 +109,16 @@ also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
 
+### v1.16.1 — Correctifs d'affichage des pets (2026-07-08)
+
+- L'œuf ne se fait plus recouvrir par le sprite pendant que la session
+  travaille (le fondu au changement d'activité passait par-dessus l'œuf)
+- L'anim « nom » fait tressauter l'œuf lui-même quand il mange ; avant,
+  l'écrasement visait le sprite resté caché derrière l'œuf, invisible
+- Un pet déjà grandi ne repart plus en œuf à chaque démarrage de session :
+  le stade initial est lu depuis le pet persisté et non depuis un cache
+  mémoire vide au rechargement de l'extension
+
 ### v1.16.0 — Pets qui évoluent + tokivore (2026-07-06)
 
 - Chaque projet a désormais une créature qui grandit à travers quatre
