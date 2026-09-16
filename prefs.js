@@ -72,6 +72,27 @@ export default class GnotchiPrefs extends ExtensionPreferences {
             settings.set_string('feed-filter', feedModes[feedRow.get_selected()]));
         behavior.add(feedRow);
 
+        const quota = new Adw.PreferencesGroup({
+            title: 'Quota d’abonnement',
+            description: 'Lit le quota Pro/Max via le token que Claude Code stocke ' +
+                'dans ~/.claude/.credentials.json. Le token part vers ' +
+                'api.anthropic.com, et nulle part ailleurs.',
+        });
+        page.add(quota);
+        const quotaRow = new Adw.SwitchRow({
+            title: 'Afficher le quota dans le popup',
+            subtitle: 'Fenêtre 5 h et limite hebdomadaire, avec l’heure de reset',
+        });
+        settings.bind('quota-enabled', quotaRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        quota.add(quotaRow);
+        const quotaRefreshRow = new Adw.SpinRow({
+            title: 'Rafraîchir au plus toutes les (secondes)',
+            subtitle: 'La requête n’a lieu qu’à l’ouverture du popup',
+            adjustment: new Gtk.Adjustment({ lower: 60, upper: 3600, step_increment: 30, page_increment: 300 }),
+        });
+        settings.bind('quota-refresh-seconds', quotaRefreshRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        quota.add(quotaRefreshRow);
+
         const notify = new Adw.PreferencesGroup({ title: 'Notifications' });
         page.add(notify);
         const stopRow = new Adw.SwitchRow({

@@ -60,6 +60,13 @@ export default class GnotchiExtension extends Extension {
         this._indicator.setCelebrateOnStop(this._settings.get_boolean('celebrate-on-stop'));
         this._settingsIds.push(this._settings.connect('changed::celebrate-on-stop',
             () => this._indicator.setCelebrateOnStop(this._settings.get_boolean('celebrate-on-stop'))));
+        this._indicator.setQuotaRefreshSeconds(this._settings.get_int('quota-refresh-seconds'));
+        this._indicator.setQuotaEnabled(this._settings.get_boolean('quota-enabled'));
+        this._settingsIds.push(this._settings.connect('changed::quota-enabled',
+            () => this._indicator.setQuotaEnabled(this._settings.get_boolean('quota-enabled'))));
+        this._settingsIds.push(this._settings.connect('changed::quota-refresh-seconds',
+            () => this._indicator.setQuotaRefreshSeconds(
+                this._settings.get_int('quota-refresh-seconds'))));
         Main.panel.addToStatusArea(this.uuid, this._indicator);
 
         this._petStore = new PetStore();

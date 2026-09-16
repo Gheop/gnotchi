@@ -9,11 +9,24 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { Mascot } from './mascot.js';
 import { nextVerb } from '../lib/spinnerVerbs.js';
 import { UsageTracker } from './usageTracker.js';
+import { QuotaTracker } from './quotaTracker.js';
 import { humanize, sparkline, prettyProject } from '../lib/usage.js';
+import { formatQuota } from '../lib/quota.js';
 import { stageEmoji, hungerMood } from '../lib/pet.js';
 import { shouldDisplay } from '../lib/feed.js';
 import { humanDuration } from '../lib/duration.js';
 import { candidateArgvs } from '../lib/terminalLauncher.js';
+
+// Motifs d'indisponibilité du quota, traduits pour le popup. Un quota
+// absent n'est jamais une erreur bloquante : la ligne l'explique et le
+// reste du menu continue de fonctionner.
+const QUOTA_REASONS = {
+    'no-token': 'Quota : pas de session Claude Code connectée',
+    'unauthorized': 'Quota : session expirée, relance `claude`',
+    'unparsable': 'Quota : réponse inattendue de l’API',
+    'offline': 'Quota : indisponible (hors ligne ?)',
+    'disabled': '',
+};
 
 const FEED_MAX = 12;
 const ISLAND_MASCOT_SIZE = 48;
@@ -79,6 +92,11 @@ class Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._usageRow);
         this._sparkRow = new PopupMenu.PopupMenuItem('7 derniers jours : …', { reactive: false });
         this.menu.addMenuItem(this._sparkRow);
+        this._quota = new QuotaTracker(() => this._renderQuota());
+        this._quotaSessionRow = new PopupMenu.PopupMenuItem('Quota session : …', { reactive: false });
+        this.menu.addMenuItem(this._quotaSessionRow);
+        this._quotaWeeklyRow = new PopupMenu.PopupMenuItem('Quota hebdo : …', { reactive: false });
+        this.menu.addMenuItem(this._quotaWeeklyRow);
         this._sessionsMenu = new PopupMenu.PopupSubMenuMenuItem('Sessions actives (0)');
         this.menu.addMenuItem(this._sessionsMenu);
         this._topProjectsRow = new PopupMenu.PopupMenuItem('Top projets : …', { reactive: false });
@@ -92,6 +110,7 @@ class Indicator extends PanelMenu.Button {
         this.menu.connect('open-state-changed', (_m, open) => {
             if (open) {
                 this._refreshUsage();
+                this._refreshQuota();
                 this._refreshPetsRow();
             }
         });
@@ -474,6 +493,35 @@ class Indicator extends PanelMenu.Button {
         }
     }
 
+    setQuotaEnabled(on) {
+        this._quota.setEnabled(on);
+        this._quotaSessionRow.visible = !!on;
+        this._quotaWeeklyRow.visible = !!on;
+        if (on)
+            this._refreshQuota();
+    }
+
+    setQuotaRefreshSeconds(seconds) {
+        this._quota.setTtl(seconds * 1000);
+    }
+
+    _refreshQuota() {
+        this._quota.summary(); // déclenche le refresh si le cache a expiré
+        this._renderQuota();
+    }
+
+    _renderQuota() {
+        const { quota, reason } = this._quota.peek();
+        const lines = formatQuota(quota, Date.now());
+        if (lines) {
+            this._quotaSessionRow.label.set_text(lines.session);
+            this._quotaWeeklyRow.label.set_text(lines.weekly);
+            return;
+        }
+        this._quotaSessionRow.label.set_text(QUOTA_REASONS[reason] || 'Quota : …');
+        this._quotaWeeklyRow.label.set_text('');
+    }
+
     _launchClaude() {
         for (const argv of candidateArgvs('claude')) {
             try {
@@ -521,6 +569,7 @@ class Indicator extends PanelMenu.Button {
     destroy() {
         this._stopSpinner();
         this._usage.destroy();
+        this._quota.destroy();
         for (const px of this._confettis) {
             try { Main.layoutManager.removeChrome(px); } catch { }
             try { px.destroy(); } catch { }

@@ -59,6 +59,11 @@ The popup shows a local estimate of today's token usage and a 7-day sparkline,
 all computed from local Claude Code transcripts in `~/.claude/projects/`. No
 network calls, no API keys, no cost numbers.
 
+Preferences → "Quota d'abonnement" adds two optional rows showing your real
+Pro/Max quota: the 5-hour session window and the weekly limit, each with its
+reset time. This is the only part of gnotchi that talks to the network; it is
+off by default.
+
 Optional GNOME notifications can be enabled in Preferences for end-of-turn
 (`Stop`) and tool errors.
 
@@ -77,6 +82,14 @@ any time via Preferences → "Remove hooks", or `bash tools/uninstall-hooks.sh`.
 The today-usage line reads only `~/.claude/projects/**/*.jsonl` transcripts
 locally, with bounded I/O (tail of each file, 250 most recent files max,
 60-second cache).
+
+The subscription quota rows are off by default. Once enabled, gnotchi reads the
+OAuth token Claude Code already stores in `~/.claude/.credentials.json` and
+sends it to `api.anthropic.com` only, to read your own usage. The request fires
+lazily when you open the popup, at most once per refresh interval (300 s by
+default), and never in the background. Turn the switch off and no request is
+ever made. The endpoint is undocumented, so any failure is silent: the row
+explains why and the rest of the popup keeps working.
 
 ## Development & testing
 
@@ -108,6 +121,21 @@ gnotchi is released under GPL-3.0 (see `LICENSE`). The sprite assets in
 also GPL-3.0 (see `assets/NOTICE`).
 
 ## Changelog
+
+### v1.17.0 — Quota d'abonnement dans le popup (2026-09-16)
+
+- Deux nouvelles lignes optionnelles dans le popup : quota de la fenêtre
+  5 heures et quota hebdomadaire, en pourcentage, avec le délai avant reset
+- La limite hebdomadaire scopée à un modèle est affichée quand l'API la
+  renvoie (« dont Fable 5 % »)
+- Désactivé par défaut : à activer dans Préférences → « Quota d'abonnement ».
+  C'est la seule partie de gnotchi qui fait un appel réseau
+- Le token OAuth déjà stocké par Claude Code est réutilisé, aucune clé API
+  à saisir, et il ne part que vers api.anthropic.com
+- La requête n'a lieu qu'à l'ouverture du popup, au plus une fois par
+  intervalle réglable (300 s par défaut), jamais en tâche de fond
+- Token absent, session expirée, réseau coupé ou réponse inattendue :
+  la ligne explique le motif, le reste du popup continue de fonctionner
 
 ### v1.16.1 — Correctifs d'affichage des pets (2026-07-08)
 

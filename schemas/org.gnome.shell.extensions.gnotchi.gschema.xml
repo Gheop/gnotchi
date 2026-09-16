@@ -68,5 +68,16 @@
       <summary>Notification au changement de stade d'un pet</summary>
       <description>Si activé, une notification GNOME est émise quand le pet d'un projet passe à un stade de vie supérieur.</description>
     </key>
+    <key name="quota-enabled" type="b">
+      <default>false</default>
+      <summary>Afficher le quota d'abonnement</summary>
+      <description>Interroge l'endpoint OAuth d'Anthropic pour afficher l'usage des fenêtres 5 h et 7 jours dans le popup. Nécessite une session Claude Code connectée.</description>
+    </key>
+    <key name="quota-refresh-seconds" type="i">
+      <default>300</default>
+      <range min="60" max="3600"/>
+      <summary>Intervalle de rafraîchissement du quota</summary>
+      <description>Âge maximal du quota en cache, en secondes, avant une nouvelle requête à l'ouverture du popup.</description>
+    </key>
   </schema>
 </schemalist>
